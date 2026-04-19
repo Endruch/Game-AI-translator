@@ -1,0 +1,502 @@
+"""
+settings.py - Settings window (Window 3)
+API key, hotkeys, overlay appearance, auto-translate, history, UI options.
+"""
+
+from pathlib import Path
+from PyQt6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QLineEdit, QPushButton, QSpinBox, QFrame,
+    QColorDialog, QMessageBox, QCheckBox, QTabWidget,
+    QWidget, QFileDialog, QDoubleSpinBox
+)
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFont, QColor
+
+from config import save_settings, get_history_folder
+
+
+class SettingsWindow(QDialog):
+    """Settings dialog — tabbed layout for all options"""
+
+    settings_saved = pyqtSignal(dict)
+
+    def __init__(self, settings: dict, parent=None):
+        super().__init__(parent)
+        self.settings = settings
+        self._border_color = settings.get("overlay", {}).get("border_color", "#00FF00")
+        self._setup_window()
+        self._build_ui()
+        self._load_values()
+
+    def _setup_window(self):
+        self.setWindowTitle("Settings — Game Translator")
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint)
+        self.setFixedWidth(460)
+        self.setStyleSheet("""
+            QDialog { background-color: #12121c; color: white; }
+            QTabWidget::pane {
+                border: 1px solid rgba(100,100,180,80);
+                border-radius: 6px;
+                background: #12121c;
+            }
+            QTabBar::tab {
+                background: rgba(30,30,50,200);
+                color: #888;
+                padding: 7px 18px;
+                border: 1px solid rgba(100,100,180,60);
+                border-bottom: none;
+                border-radius: 5px 5px 0 0;
+                font-size: 11px;
+            }
+            QTabBar::tab:selected { background: #12121c; color: #aaaaff; }
+            QTabBar::tab:hover { color: white; }
+            QLabel { color: #ccccee; font-size: 12px; }
+            QLineEdit, QSpinBox, QDoubleSpinBox {
+                background: #1e1e30;
+                color: white;
+                border: 1px solid rgba(100,100,180,150);
+                border-radius: 4px;
+                padding: 5px 8px;
+                font-size: 12px;
+            }
+            QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+                border-color: #6666cc;
+            }
+            QCheckBox { color: #ccccee; font-size: 12px; spacing: 8px; }
+            QCheckBox::indicator {
+                width: 16px; height: 16px;
+                border: 1px solid rgba(100,100,180,150);
+                border-radius: 3px;
+                background: #1e1e30;
+            }
+            QCheckBox::indicator:checked {
+                background: #5555cc;
+                border-color: #8888ff;
+            }
+        """)
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+
+        # Title
+        title = QLabel("⚙  Settings")
+        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
+        title.setStyleSheet("color: #aaaaff;")
+        layout.addWidget(title)
+
+        # Tabs
+        tabs = QTabWidget()
+        tabs.addTab(self._tab_general(), "General")
+        tabs.addTab(self._tab_overlay(), "Overlay")
+        tabs.addTab(self._tab_auto(), "Auto-Translate")
+        tabs.addTab(self._tab_history(), "History")
+        tabs.addTab(self._tab_ui(), "Interface")
+        layout.addWidget(tabs)
+
+        # Buttons
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setFixedHeight(32)
+        cancel_btn.setStyleSheet(self._cancel_style())
+        cancel_btn.clicked.connect(self.reject)
+        save_btn = QPushButton("  Save  ")
+        save_btn.setFixedHeight(32)
+        save_btn.setStyleSheet(self._save_style())
+        save_btn.clicked.connect(self._save)
+        btn_row.addWidget(cancel_btn)
+        btn_row.addWidget(save_btn)
+        layout.addLayout(btn_row)
+
+    # ─────────────────────────────────────────────
+    # TAB: General
+    # ─────────────────────────────────────────────
+    def _tab_general(self) -> QWidget:
+        w = QWidget()
+        layout = QVBoxLayout(w)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 16, 12, 12)
+
+        # API Key
+        layout.addWidget(self._section("Claude API Key"))
+        self.api_key_input = QLineEdit()
+        self.api_key_input.setPlaceholderText("sk-ant-...")
+        self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        show_btn = QPushButton("Show")
+        show_btn.setFixedWidth(55)
+        show_btn.setCheckable(True)
+        show_btn.setStyleSheet(self._small_btn_style())
+        show_btn.toggled.connect(lambda c: self.api_key_input.setEchoMode(
+            QLineEdit.EchoMode.Normal if c else QLineEdit.EchoMode.Password))
+        show_btn.toggled.connect(lambda c: show_btn.setText("Hide" if c else "Show"))
+        row = QHBoxLayout()
+        row.addWidget(self.api_key_input)
+        row.addWidget(show_btn)
+        layout.addLayout(row)
+        hint = QLabel("Get your key at: console.anthropic.com")
+        hint.setStyleSheet("color: #556688; font-size: 10px;")
+        layout.addWidget(hint)
+
+        layout.addWidget(self._sep())
+
+        # Hotkeys
+        layout.addWidget(self._section("Hotkeys"))
+
+        row1 = QHBoxLayout()
+        row1.addWidget(QLabel("Translate:"))
+        self.hotkey_input = QLineEdit()
+        self.hotkey_input.setPlaceholderText("e.g. F9")
+        self.hotkey_input.setFixedWidth(100)
+        row1.addWidget(self.hotkey_input)
+        row1.addStretch()
+        layout.addLayout(row1)
+
+        row2 = QHBoxLayout()
+        row2.addWidget(QLabel("Show / Hide overlay:"))
+        self.hotkey_hide_input = QLineEdit()
+        self.hotkey_hide_input.setPlaceholderText("e.g. F8")
+        self.hotkey_hide_input.setFixedWidth(100)
+        row2.addWidget(self.hotkey_hide_input)
+        row2.addStretch()
+        layout.addLayout(row2)
+
+        layout.addWidget(self._sep())
+
+        # Autostart
+        self.autostart_check = QCheckBox("Launch with Windows")
+        layout.addWidget(self.autostart_check)
+
+        layout.addStretch()
+        return w
+
+    # ─────────────────────────────────────────────
+    # TAB: Overlay
+    # ─────────────────────────────────────────────
+    def _tab_overlay(self) -> QWidget:
+        w = QWidget()
+        layout = QVBoxLayout(w)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 16, 12, 12)
+
+        layout.addWidget(self._section("Capture Frame Appearance"))
+
+        # Border color
+        color_row = QHBoxLayout()
+        color_row.addWidget(QLabel("Border color:"))
+        self.color_preview = QPushButton()
+        self.color_preview.setFixedSize(40, 26)
+        self.color_preview.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.color_preview.clicked.connect(self._pick_color)
+        self._update_color_preview()
+        color_row.addWidget(self.color_preview)
+        color_row.addStretch()
+        layout.addLayout(color_row)
+
+        # Border width
+        width_row = QHBoxLayout()
+        width_row.addWidget(QLabel("Border width (px):"))
+        self.border_width_spin = QSpinBox()
+        self.border_width_spin.setRange(1, 10)
+        self.border_width_spin.setFixedWidth(70)
+        width_row.addWidget(self.border_width_spin)
+        width_row.addStretch()
+        layout.addLayout(width_row)
+
+        layout.addWidget(self._sep())
+        layout.addWidget(self._section("Translator Window"))
+
+        # Translator window opacity
+        opacity_row = QHBoxLayout()
+        opacity_row.addWidget(QLabel("Window opacity (%):"))
+        self.opacity_spin = QSpinBox()
+        self.opacity_spin.setRange(20, 100)
+        self.opacity_spin.setSuffix(" %")
+        self.opacity_spin.setFixedWidth(80)
+        opacity_row.addWidget(self.opacity_spin)
+        opacity_row.addStretch()
+        layout.addLayout(opacity_row)
+
+        layout.addStretch()
+        return w
+
+    # ─────────────────────────────────────────────
+    # TAB: Auto-Translate
+    # ─────────────────────────────────────────────
+    def _tab_auto(self) -> QWidget:
+        w = QWidget()
+        layout = QVBoxLayout(w)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 16, 12, 12)
+
+        layout.addWidget(self._section("Automatic Translation"))
+
+        self.auto_enabled_check = QCheckBox("Enable auto-translate")
+        layout.addWidget(self.auto_enabled_check)
+
+        info = QLabel(
+            "When enabled, the app checks the capture area every N seconds.\n"
+            "Translation only runs if the text has changed since last check."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #667799; font-size: 10px;")
+        layout.addWidget(info)
+
+        layout.addWidget(self._sep())
+
+        interval_row = QHBoxLayout()
+        interval_row.addWidget(QLabel("Check interval (seconds):"))
+        self.interval_spin = QSpinBox()
+        self.interval_spin.setRange(2, 60)
+        self.interval_spin.setSuffix(" s")
+        self.interval_spin.setFixedWidth(80)
+        interval_row.addWidget(self.interval_spin)
+        interval_row.addStretch()
+        layout.addLayout(interval_row)
+
+        layout.addWidget(self._sep())
+
+        self.sound_check = QCheckBox("Play sound when translation is ready")
+        layout.addWidget(self.sound_check)
+
+        layout.addStretch()
+        return w
+
+    # ─────────────────────────────────────────────
+    # TAB: History
+    # ─────────────────────────────────────────────
+    def _tab_history(self) -> QWidget:
+        w = QWidget()
+        layout = QVBoxLayout(w)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 16, 12, 12)
+
+        layout.addWidget(self._section("Translation History Log"))
+
+        self.history_enabled_check = QCheckBox("Save translation history to file")
+        layout.addWidget(self.history_enabled_check)
+
+        info = QLabel(
+            "Each translation is appended to a daily log file:\n"
+            "translation_log_YYYY-MM-DD.txt"
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #667799; font-size: 10px;")
+        layout.addWidget(info)
+
+        layout.addWidget(self._sep())
+        layout.addWidget(self._section("Log Folder"))
+
+        self.history_folder_input = QLineEdit()
+        self.history_folder_input.setPlaceholderText("Default: Documents\\GameTranslator\\")
+        self.history_folder_input.setReadOnly(True)
+        browse_btn = QPushButton("Browse...")
+        browse_btn.setFixedWidth(80)
+        browse_btn.setStyleSheet(self._small_btn_style())
+        browse_btn.clicked.connect(self._browse_history_folder)
+
+        folder_row = QHBoxLayout()
+        folder_row.addWidget(self.history_folder_input)
+        folder_row.addWidget(browse_btn)
+        layout.addLayout(folder_row)
+
+        # Show current log folder
+        self._folder_hint = QLabel("")
+        self._folder_hint.setStyleSheet("color: #556688; font-size: 10px;")
+        self._folder_hint.setWordWrap(True)
+        layout.addWidget(self._folder_hint)
+
+        open_btn = QPushButton("Open log folder")
+        open_btn.setFixedWidth(140)
+        open_btn.setStyleSheet(self._small_btn_style())
+        open_btn.clicked.connect(self._open_history_folder)
+        layout.addWidget(open_btn)
+
+        layout.addStretch()
+        return w
+
+    # ─────────────────────────────────────────────
+    # TAB: Interface
+    # ─────────────────────────────────────────────
+    def _tab_ui(self) -> QWidget:
+        w = QWidget()
+        layout = QVBoxLayout(w)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 16, 12, 12)
+
+        layout.addWidget(self._section("Translation Text"))
+
+        font_row = QHBoxLayout()
+        font_row.addWidget(QLabel("Font size (pt):"))
+        self.font_size_spin = QSpinBox()
+        self.font_size_spin.setRange(8, 24)
+        self.font_size_spin.setFixedWidth(70)
+        font_row.addWidget(self.font_size_spin)
+        font_row.addStretch()
+        layout.addLayout(font_row)
+
+        layout.addStretch()
+        return w
+
+    # ─────────────────────────────────────────────
+    # Load / Save
+    # ─────────────────────────────────────────────
+    def _load_values(self):
+        s = self.settings
+        self.api_key_input.setText(s.get("api_key", ""))
+        self.hotkey_input.setText(s.get("hotkey", "F9"))
+        self.hotkey_hide_input.setText(s.get("hotkey_hide_overlay", "F8"))
+
+        ov = s.get("overlay", {})
+        self.border_width_spin.setValue(ov.get("border_width", 3))
+
+        tw = s.get("translator_window", {})
+        opacity_pct = round(tw.get("opacity", 230) / 255 * 100)
+        self.opacity_spin.setValue(opacity_pct)
+
+        at = s.get("auto_translate", {})
+        self.auto_enabled_check.setChecked(at.get("enabled", False))
+        self.interval_spin.setValue(at.get("interval_seconds", 5))
+
+        h = s.get("history", {})
+        self.history_enabled_check.setChecked(h.get("enabled", True))
+        custom_folder = h.get("folder", "")
+        self.history_folder_input.setText(custom_folder)
+        self._update_folder_hint()
+
+        ui = s.get("ui", {})
+        self.font_size_spin.setValue(ui.get("font_size", 11))
+        self.sound_check.setChecked(ui.get("sound_on_translate", False))
+        self.autostart_check.setChecked(ui.get("autostart_with_windows", False))
+
+    def _save(self):
+        s = self.settings
+        s["api_key"] = self.api_key_input.text().strip()
+        s["hotkey"] = self.hotkey_input.text().strip() or "F9"
+        s["hotkey_hide_overlay"] = self.hotkey_hide_input.text().strip() or "F8"
+
+        s["overlay"]["border_color"] = self._border_color
+        s["overlay"]["border_width"] = self.border_width_spin.value()
+
+        opacity_val = round(self.opacity_spin.value() / 100 * 255)
+        s["translator_window"]["opacity"] = opacity_val
+
+        s["auto_translate"]["enabled"] = self.auto_enabled_check.isChecked()
+        s["auto_translate"]["interval_seconds"] = self.interval_spin.value()
+
+        s["history"]["enabled"] = self.history_enabled_check.isChecked()
+        s["history"]["folder"] = self.history_folder_input.text().strip()
+
+        s["ui"]["font_size"] = self.font_size_spin.value()
+        s["ui"]["sound_on_translate"] = self.sound_check.isChecked()
+        s["ui"]["autostart_with_windows"] = self.autostart_check.isChecked()
+
+        # Handle autostart registry
+        self._apply_autostart(s["ui"]["autostart_with_windows"])
+
+        if save_settings(s):
+            self.settings_saved.emit(s)
+            self.accept()
+        else:
+            QMessageBox.warning(self, "Error", "Could not save settings file.")
+
+    def _apply_autostart(self, enabled: bool):
+        """Add or remove program from Windows startup via registry"""
+        try:
+            import winreg
+            import sys
+            key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path,
+                                 0, winreg.KEY_SET_VALUE)
+            if enabled:
+                exe_path = sys.executable
+                winreg.SetValueEx(key, "GameTranslator", 0, winreg.REG_SZ, exe_path)
+            else:
+                try:
+                    winreg.DeleteValue(key, "GameTranslator")
+                except FileNotFoundError:
+                    pass
+            winreg.CloseKey(key)
+        except Exception as e:
+            print(f"[Autostart] {e}")
+
+    def _pick_color(self):
+        color = QColorDialog.getColor(QColor(self._border_color), self, "Choose Border Color")
+        if color.isValid():
+            self._border_color = color.name()
+            self._update_color_preview()
+
+    def _update_color_preview(self):
+        self.color_preview.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {self._border_color};
+                border: 1px solid rgba(255,255,255,100);
+                border-radius: 3px;
+            }}
+        """)
+
+    def _browse_history_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Choose Log Folder")
+        if folder:
+            self.history_folder_input.setText(folder)
+            self._update_folder_hint()
+
+    def _update_folder_hint(self):
+        folder = get_history_folder(self.settings)
+        self._folder_hint.setText(f"Current: {folder}")
+
+    def _open_history_folder(self):
+        import subprocess
+        folder = get_history_folder(self.settings)
+        try:
+            subprocess.Popen(f'explorer "{folder}"')
+        except Exception:
+            pass
+
+    # ─────────────────────────────────────────────
+    # Helpers
+    # ─────────────────────────────────────────────
+    def _section(self, text: str) -> QLabel:
+        label = QLabel(text)
+        label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))
+        label.setStyleSheet("color: #8888cc;")
+        return label
+
+    def _sep(self) -> QFrame:
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("background: rgba(100,100,180,60);")
+        sep.setFixedHeight(1)
+        return sep
+
+    def _small_btn_style(self):
+        return """
+            QPushButton {
+                background: rgba(50,50,80,200); color: #aaa;
+                border: 1px solid rgba(100,100,180,100);
+                border-radius: 4px; padding: 4px; font-size: 11px;
+            }
+            QPushButton:hover { color: white; }
+        """
+
+    def _save_style(self):
+        return """
+            QPushButton {
+                background: rgba(60,100,200,220); color: white;
+                border: none; border-radius: 5px;
+                padding: 0 16px; font-size: 12px; font-weight: bold;
+            }
+            QPushButton:hover { background: rgba(80,120,220,230); }
+        """
+
+    def _cancel_style(self):
+        return """
+            QPushButton {
+                background: rgba(50,50,70,180); color: #aaa;
+                border: 1px solid rgba(100,100,150,100);
+                border-radius: 5px; padding: 0 12px; font-size: 12px;
+            }
+            QPushButton:hover { color: white; }
+        """

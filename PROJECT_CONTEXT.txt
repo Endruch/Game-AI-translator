@@ -1,0 +1,227 @@
+# Game Translator — Project Context File
+# Paste this into the chat in VS Code so Claude understands the full project.
+# Last updated: after adding auto-translate, history logging, hide overlay hotkey.
+
+================================================================================
+PROJECT SUMMARY
+================================================================================
+
+Project:  Game Translator — Real-time game chat translator
+Language: Python 3.11+ (64-bit)
+UI:       PyQt6 (frameless, dark-themed, always-on-top windows)
+OCR:      Windows built-in OCR (winrt) — zero extra installs
+API:      Claude API (claude-sonnet-4-20250514) — auto language detect + translate
+Target:   Windows 10/11 → single EXE via PyInstaller
+
+================================================================================
+FILE STRUCTURE
+================================================================================
+
+translator/
+├── main.py               # Entry point — wires everything together
+├── overlay.py            # Window 1 — transparent capture frame
+├── translator_window.py  # Window 2 — translation output
+├── settings.py           # Window 3 — settings dialog (tabbed)
+├── help.py               # Window 4 — help/guide
+├── ocr_engine.py         # Screenshot + Windows OCR (in-memory only)
+├── claude_api.py         # Claude API translation logic
+├── history_logger.py     # Daily translation log → Documents folder
+├── config.py             # Settings load/save (%APPDATA%)
+├── requirements.txt      # pip dependencies
+└── PROJECT_CONTEXT.txt   # This file
+
+================================================================================
+FEATURES IMPLEMENTED
+================================================================================
+
+[✓] Window 1 — transparent draggable/resizable overlay frame (always on top)
+[✓] Window 2 — translation output with language dropdown
+[✓] Manual translation via hotkey (default F9) or Translate button
+[✓] Auto-detect source language (Claude handles any mix of languages)
+[✓] Settings window — tabbed layout with all options
+[✓] Help window — full usage guide
+[✓] System tray icon — show/hide/quit
+[✓] Settings saved to %APPDATA%\GameTranslator\settings.json
+[✓] DPI awareness fix (ctypes, process-level, before QApplication)
+[✓] Translation runs in QThread — UI never freezes
+[✓] No screenshots saved to disk — all OCR in RAM only
+
+[✓] NEW: Hide/show overlay via separate hotkey (default F8)
+[✓] NEW: Auto-translate timer — checks every N seconds, only translates if text changed
+[✓] NEW: Auto-translate indicator dot in translator window title bar (green = ON)
+[✓] NEW: Daily translation history log → Documents\GameTranslator\translation_log_YYYY-MM-DD.txt
+[✓] NEW: Sound on translation complete (Windows beep, optional)
+[✓] NEW: Translator window opacity setting
+[✓] NEW: Font size setting for translation output
+[✓] NEW: Launch with Windows (registry autostart)
+[✓] NEW: Open log folder button in settings
+[✓] NEW: reset_last_text() called when overlay moves (forces re-translate on next auto tick)
+
+================================================================================
+SETTINGS STRUCTURE (config.py DEFAULT_SETTINGS)
+================================================================================
+
+{
+  "api_key": "",
+  "target_language": "Russian",
+  "hotkey": "F9",                        # manual translate hotkey
+  "hotkey_hide_overlay": "F8",           # show/hide overlay hotkey
+
+  "overlay": {
+    "x", "y", "width", "height",
+    "border_color": "#00FF00",
+    "border_width": 3
+  },
+
+  "translator_window": {
+    "x", "y", "width", "height",
+    "opacity": 230                        # 0-255 background alpha
+  },
+
+  "auto_translate": {
+    "enabled": false,
+    "interval_seconds": 5
+  },
+
+  "history": {
+    "enabled": true,
+    "folder": ""                          # empty = Documents\GameTranslator\
+  },
+
+  "ui": {
+    "font_size": 11,
+    "sound_on_translate": false,
+    "autostart_with_windows": false
+  }
+}
+
+================================================================================
+KEY FILES — WHAT EACH DOES
+================================================================================
+
+main.py
+  - App class controls everything
+  - TranslationWorker(QObject) — manual translate in QThread
+  - AutoTranslateWorker(QObject) — auto translate (only if text changed)
+  - QTimer for auto-translate ticks
+  - _busy flag prevents overlapping translations
+  - _patch_event_handler() — patches OverlayWindow and TranslatorWindow
+    to handle custom QEvents from keyboard hotkey threads:
+      _TranslateEvent → triggers translate_requested signal
+      _ToggleOverlayEvent → show/hide overlay
+  - winsound.MessageBeep for optional sound notification
+  - ctypes DPI awareness at top of file (before QApplication)
+
+overlay.py — OverlayWindow(QWidget)
+  - Flags: FramelessWindowHint | WindowStaysOnTopHint | Tool
+  - WA_TranslucentBackground
+  - Draggable via mousePressEvent/mouseMoveEvent
+  - Resizable via QSizeGrip bottom-right
+  - paintEvent: draws colored border + corner handles + slight tint inside
+  - get_capture_rect() → QRect — used by OCR engine
+  - geometry_changed signal → triggers reset_last_text() + settings save
+  - update_style(color, width) — live update from settings
+  - Handles _ToggleOverlayEvent to show/hide itself
+
+translator_window.py — TranslatorWindow(QWidget)
+  - Frameless, always on top, dark theme
+  - Custom title bar with minimize + close
+  - _auto_dot QLabel in title bar — green ● = auto ON, grey = auto OFF
+  - set_auto_translate_indicator(bool)
+  - apply_new_settings(dict) — applies font, opacity, language live
+  - show_translation(text), show_loading(), show_error(text)
+  - translate_btn disabled while translating (re-enabled on result)
+  - Handles _TranslateEvent → emits translate_requested
+
+settings.py — SettingsWindow(QDialog)
+  Tabs:
+    General  — API key (masked), translate hotkey, hide hotkey, autostart
+    Overlay  — border color (QColorDialog), border width, window opacity
+    Auto     — enable checkbox, interval spinbox, sound checkbox
+    History  — enable checkbox, folder picker, open folder button
+    Interface — font size spinbox
+  - _apply_autostart() — writes/removes HKCU Run registry key
+  - settings_saved(dict) signal on successful save
+
+history_logger.py
+  - log_translation(original, translated, target_lang, settings)
+  - Appends to Documents\GameTranslator\translation_log_YYYY-MM-DD.txt
+  - Each entry: timestamp, language, original text, translated text
+  - New file per day — old files accumulate, user manages them
+  - get_all_log_files(settings) → list of Path sorted newest first
+
+ocr_engine.py
+  - capture_and_recognize_sync(x,y,w,h) → str  [used by manual translate]
+  - capture_if_changed(x,y,w,h) → (bool, str)   [used by auto-translate]
+    compares with _last_ocr_text, returns (False,"") if same
+  - reset_last_text() — call when overlay moves
+
+claude_api.py
+  - translate_text(text, target_language, api_key) → str
+  - Prompt tells Claude: auto-detect language, keep player names,
+    return ONLY translated text
+  - Error handling: AuthenticationError, RateLimitError, APIConnectionError
+
+config.py
+  - get_history_folder(settings) → Path (Documents\GameTranslator\ or custom)
+  - load_settings() / save_settings() with deep merge against defaults
+
+================================================================================
+HOW TO RUN (VS CODE)
+================================================================================
+
+1. Open translator/ folder in VS Code
+2. python -m venv venv
+3. venv\Scripts\activate
+4. pip install -r requirements.txt
+5. python main.py
+
+Note: may need to run as Administrator for hotkeys to work while a game is focused.
+
+================================================================================
+HOW TO BUILD EXE
+================================================================================
+
+pip install pyinstaller
+pyinstaller --onefile --windowed --collect-all winrt --name "GameTranslator" main.py
+
+Output: dist\GameTranslator.exe
+
+================================================================================
+KNOWN ISSUES / WATCH OUT FOR
+================================================================================
+
+1. HOTKEYS IN GAMES
+   Some fullscreen games block global hotkeys. Run as Administrator if F9/F8
+   don't work while the game window is focused.
+
+2. WINRT BUILD
+   Use --collect-all winrt in PyInstaller command. Without it winrt runtime
+   files won't be bundled and the EXE will crash on OCR.
+
+3. FULLSCREEN GAMES
+   Overlay works best in Windowed or Borderless Windowed mode.
+   True exclusive fullscreen hides overlay windows.
+
+4. WINDOWS OCR LANGUAGES
+   Windows OCR uses installed language packs. Korean may need to be installed:
+   Windows Settings → Time & Language → Language → Add a language.
+
+5. WINSOUND
+   winsound is Windows-only stdlib module — no pip install needed.
+   Only works in EXE on Windows (not in Linux/Mac dev environments).
+
+================================================================================
+TODO / POSSIBLE NEXT FEATURES
+================================================================================
+
+[ ] Add assets/icon.ico and use it in tray + PyInstaller
+[ ] "Copy to clipboard" button in translator window
+[ ] Translation history viewer inside the app (browse past logs)
+[ ] Game context field in settings (helps Claude with game-specific terms)
+[ ] Word exclusion list (player names, clan names — don't translate these)
+[ ] Mini-mode for translator window (collapse to single line)
+
+================================================================================
+END OF CONTEXT
+================================================================================
