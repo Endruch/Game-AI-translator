@@ -27,10 +27,11 @@ class TranslatorWindow(QWidget):
         super().__init__()
         self.settings = settings
         self._drag_pos = None
-        self._detected_colors = {}  # {hex_color: QCheckBox}
+        self._color_checkboxes = {}  # {hex_color: QCheckBox}
         self._setup_window()
         self._build_ui()
         self._apply_settings()
+        self._init_color_filters()  # Initialize predefined colors
 
     def _setup_window(self):
         self.setWindowTitle("Game Translator")
@@ -357,14 +358,21 @@ class TranslatorWindow(QWidget):
         self.settings["translator_window"]["height"] = geo.height()
 
     # ── Color filters ──
-    def add_detected_color(self, hex_color: str):
-        """Add a newly detected color to the filter panel"""
-        if hex_color in self._detected_colors:
+    def _init_color_filters(self):
+        """Initialize predefined color filters from settings"""
+        color_filters = self.settings.get("color_filters", {})
+
+        for hex_color, enabled in color_filters.items():
+            self._add_color_checkbox(hex_color, enabled)
+
+    def _add_color_checkbox(self, hex_color: str, checked: bool = True):
+        """Add a color checkbox to the filter panel"""
+        if hex_color in self._color_checkboxes:
             return  # Already exists
 
         # Create checkbox for this color
         checkbox = QCheckBox()
-        checkbox.setChecked(True)  # Enabled by default
+        checkbox.setChecked(checked)
         checkbox.setFixedSize(38, 24)
         checkbox.setStyleSheet(f"""
             QCheckBox {{
@@ -391,25 +399,26 @@ class TranslatorWindow(QWidget):
 
         # Add to layout (before stretch)
         self._color_layout.insertWidget(self._color_layout.count() - 1, checkbox)
-        self._detected_colors[hex_color] = checkbox
+        self._color_checkboxes[hex_color] = checkbox
 
     def get_enabled_color_filters(self) -> list:
         """Returns list of hex colors that are currently enabled"""
         enabled = []
-        for hex_color, checkbox in self._detected_colors.items():
+        for hex_color, checkbox in self._color_checkboxes.items():
             if checkbox.isChecked():
                 enabled.append(hex_color)
         return enabled
 
-    def clear_color_filters(self):
-        """Remove all color filter checkboxes"""
-        for checkbox in self._detected_colors.values():
-            checkbox.deleteLater()
-        self._detected_colors.clear()
-
     def _on_color_filter_changed(self):
         """Emits signal when color filter state changes"""
-        self.color_filters_changed.emit(self.get_enabled_color_filters())
+        enabled = self.get_enabled_color_filters()
+        self.color_filters_changed.emit(enabled)
+
+        # Save state to settings
+        color_filters = {}
+        for hex_color, checkbox in self._color_checkboxes.items():
+            color_filters[hex_color] = checkbox.isChecked()
+        self.settings["color_filters"] = color_filters
 
     # ── Drag to move ──
     def mousePressEvent(self, event):

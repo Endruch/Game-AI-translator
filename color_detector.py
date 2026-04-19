@@ -28,20 +28,35 @@ def get_dominant_colors(x: int, y: int, width: int, height: int, max_colors: int
         img = screenshot.convert('RGB')
         pixels = list(img.getdata())
 
-        # Filter out very dark (background) and very light (white/gray background) colors
-        # We want actual text colors
+        # Filter to get only text colors (bright, saturated colors)
+        # Text in games is usually bright and colorful
         filtered_pixels = []
         for pixel in pixels:
             r, g, b = pixel
             brightness = (r + g + b) / 3
 
-            # Skip very dark (< 30) and very light (> 225) colors
-            if 30 < brightness < 225:
-                # Skip grayscale colors (when RGB values are too similar)
+            # Text colors are usually medium-bright to very bright (80-255)
+            # Skip very dark colors (backgrounds, shadows)
+            if brightness < 80:
+                continue
+
+            # Skip nearly white/gray colors (often background or UI elements)
+            if brightness > 240:
                 max_val = max(r, g, b)
                 min_val = min(r, g, b)
-                if max_val - min_val > 20:  # Has color saturation
-                    filtered_pixels.append(pixel)
+                # If it's too close to white (all values high and similar), skip it
+                if max_val - min_val < 30:
+                    continue
+
+            # Check color saturation - text usually has strong color
+            max_val = max(r, g, b)
+            min_val = min(r, g, b)
+            saturation = (max_val - min_val) / max_val if max_val > 0 else 0
+
+            # Keep colors with decent saturation (colorful text)
+            # Or very bright colors even with lower saturation (white/yellow text)
+            if saturation > 0.3 or brightness > 200:
+                filtered_pixels.append(pixel)
 
         if not filtered_pixels:
             return []

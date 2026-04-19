@@ -19,7 +19,6 @@ from help import HelpWindow
 from ocr_engine import capture_and_recognize_sync, capture_if_changed, reset_last_text
 from claude_api import translate_text
 from history_logger import log_translation
-from color_detector import get_dominant_colors
 
 # DPI fix — must be before QApplication
 import ctypes
@@ -35,7 +34,6 @@ except Exception:
 class TranslationWorker(QObject):
     finished = pyqtSignal(str, str)   # (original_text, translated_text)
     error    = pyqtSignal(str)
-    colors_detected = pyqtSignal(list)  # Emits list of detected colors
 
     def __init__(self, x, y, width, height, source_language, target_language, api_key, color_filters=None):
         super().__init__()
@@ -49,11 +47,6 @@ class TranslationWorker(QObject):
         self.color_filters   = color_filters
 
     def run(self):
-        # Detect colors in the screenshot
-        detected = get_dominant_colors(self.x, self.y, self.width, self.height)
-        if detected:
-            self.colors_detected.emit(detected)
-
         # Run OCR with color filters
         text = capture_and_recognize_sync(self.x, self.y, self.width, self.height, self.color_filters)
         if not text:
@@ -74,7 +67,6 @@ class AutoTranslateWorker(QObject):
     finished = pyqtSignal(str, str)
     no_change = pyqtSignal()
     error = pyqtSignal(str)
-    colors_detected = pyqtSignal(list)
 
     def __init__(self, x, y, width, height, source_language, target_language, api_key, color_filters=None):
         super().__init__()
@@ -86,11 +78,6 @@ class AutoTranslateWorker(QObject):
         self.color_filters = color_filters
 
     def run(self):
-        # Detect colors
-        detected = get_dominant_colors(self.x, self.y, self.width, self.height)
-        if detected:
-            self.colors_detected.emit(detected)
-
         changed, text = capture_if_changed(self.x, self.y, self.width, self.height, self.color_filters)
         if not changed:
             self.no_change.emit()
@@ -232,7 +219,6 @@ class App:
         self._worker.finished.connect(lambda *_: self._worker_thread.quit())
         self._worker.error.connect(self.translator_win.show_error)
         self._worker.error.connect(lambda: self._worker_thread.quit())
-        self._worker.colors_detected.connect(self._on_colors_detected)
         self._worker_thread.finished.connect(lambda: setattr(self, '_busy', False))
         self._worker_thread.start()
 
@@ -275,7 +261,6 @@ class App:
         self._auto_worker.no_change.connect(lambda: self._auto_thread.quit())
         self._auto_worker.error.connect(self.translator_win.show_error)
         self._auto_worker.error.connect(lambda: self._auto_thread.quit())
-        self._auto_worker.colors_detected.connect(self._on_colors_detected)
         self._auto_thread.finished.connect(lambda: setattr(self, '_busy', False))
         self._auto_thread.start()
 
@@ -314,15 +299,9 @@ class App:
         self.settings["source_language"] = lang
         save_settings(self.settings)
 
-    def _on_colors_detected(self, colors: list):
-        """Add newly detected colors to the filter panel"""
-        for color in colors:
-            self.translator_win.add_detected_color(color)
-
     def _on_color_filters_changed(self, enabled_colors: list):
-        """Save enabled color filters to settings"""
-        self.settings["color_filters"] = enabled_colors
-        save_settings(self.settings)
+        """Color filters are saved in translator_window, no need to save here"""
+        pass
 
     def _on_overlay_moved(self):
         reset_last_text()   # force re-translate on next auto tick

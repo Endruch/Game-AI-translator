@@ -14,12 +14,20 @@ DEFAULT_SETTINGS = {
     "source_language": "Auto-detect",
     "target_language": "Russian",
 
-    # Color filters
-    "color_filters": [],  # List of hex colors to filter by
+    # Color filters - predefined chat text colors
+    "color_filters": {
+        "#FFFFFF": True,  # White
+        "#FFD700": True,  # Gold
+        "#C8C8C8": True,  # Gray
+        "#00BFFF": True,  # Deep Sky Blue
+        "#00FF7F": True,  # Spring Green
+        "#87CEEB": True,  # Sky Blue
+        "#4169FF": True,  # Royal Blue
+    },
 
-    # Hotkeys
-    "hotkey": "F9",
-    "hotkey_hide_overlay": "F8",
+    # Hotkeys (use + for combinations, e.g. "shift+F9")
+    "hotkey": "shift+F9",
+    "hotkey_hide_overlay": "shift+F8",
 
     # Overlay (Window 1) appearance and position
     "overlay": {
