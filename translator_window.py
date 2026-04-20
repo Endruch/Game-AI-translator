@@ -362,6 +362,33 @@ class TranslatorWindow(QWidget):
         """Initialize predefined color filters from settings"""
         color_filters = self.settings.get("color_filters", {})
 
+        # Handle old format (list) - convert to new format (dict)
+        if isinstance(color_filters, list):
+            # Old format was a list, convert to dict with all enabled
+            color_filters = {
+                "#FFFFFF": True,
+                "#FFD700": True,
+                "#C8C8C8": True,
+                "#00BFFF": True,
+                "#00FF7F": True,
+                "#87CEEB": True,
+                "#4169FF": True,
+            }
+            self.settings["color_filters"] = color_filters
+
+        # If empty dict, use defaults
+        if not color_filters:
+            color_filters = {
+                "#FFFFFF": True,
+                "#FFD700": True,
+                "#C8C8C8": True,
+                "#00BFFF": True,
+                "#00FF7F": True,
+                "#87CEEB": True,
+                "#4169FF": True,
+            }
+            self.settings["color_filters"] = color_filters
+
         for hex_color, enabled in color_filters.items():
             self._add_color_checkbox(hex_color, enabled)
 
