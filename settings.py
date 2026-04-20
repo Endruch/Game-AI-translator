@@ -25,16 +25,31 @@ class SettingsWindow(QDialog):
         super().__init__(parent)
         self.settings = settings
         self._border_color = settings.get("overlay", {}).get("border_color", "#00FF00")
+        self._drag_pos = None
         self._setup_window()
         self._build_ui()
         self._load_values()
 
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and event.position().y() < 40:
+            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.MouseButton.LeftButton and self._drag_pos:
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+        super().mouseReleaseEvent(event)
+
     def _setup_window(self):
         self.setWindowTitle("Settings — Game Translator")
-        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setFixedWidth(460)
         self.setStyleSheet("""
-            QDialog { background-color: #12121c; color: white; }
+            QDialog { background-color: #12121c; color: white; border: 2px solid rgba(100,100,180,150); border-radius: 8px; }
             QTabWidget::pane {
                 border: 1px solid rgba(100,100,180,80);
                 border-radius: 6px;
@@ -78,14 +93,48 @@ class SettingsWindow(QDialog):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        # Title
-        title = QLabel("⚙  Settings")
-        title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
+        # Custom title bar
+        title_bar = QWidget()
+        title_bar.setFixedHeight(40)
+        title_bar.setStyleSheet("background: rgba(30,30,50,220); border-bottom: 2px solid rgba(100,100,180,100);")
+        title_bar_layout = QHBoxLayout(title_bar)
+        title_bar_layout.setContentsMargins(16, 0, 8, 0)
+
+        title = QLabel("⚙  Settings — Game Translator")
+        title.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
         title.setStyleSheet("color: #aaaaff;")
-        layout.addWidget(title)
+        title_bar_layout.addWidget(title)
+        title_bar_layout.addStretch()
+
+        close_btn = QPushButton("✕")
+        close_btn.setFixedSize(32, 32)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                color: #888;
+                border: none;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: rgba(200,50,50,180);
+                color: white;
+                border-radius: 4px;
+            }
+        """)
+        close_btn.clicked.connect(self.reject)
+        title_bar_layout.addWidget(close_btn)
+
+        layout.addWidget(title_bar)
+
+        # Content area
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(16, 16, 16, 16)
+        content_layout.setSpacing(12)
 
         # Tabs
         tabs = QTabWidget()
@@ -94,7 +143,7 @@ class SettingsWindow(QDialog):
         tabs.addTab(self._tab_auto(), "Auto-Translate")
         tabs.addTab(self._tab_history(), "History")
         tabs.addTab(self._tab_ui(), "Interface")
-        layout.addWidget(tabs)
+        content_layout.addWidget(tabs)
 
         # Buttons
         btn_row = QHBoxLayout()
@@ -109,7 +158,9 @@ class SettingsWindow(QDialog):
         save_btn.clicked.connect(self._save)
         btn_row.addWidget(cancel_btn)
         btn_row.addWidget(save_btn)
-        layout.addLayout(btn_row)
+        content_layout.addLayout(btn_row)
+
+        layout.addWidget(content)
 
     # ─────────────────────────────────────────────
     # TAB: General
@@ -145,11 +196,15 @@ class SettingsWindow(QDialog):
         # Hotkeys
         layout.addWidget(self._section("Hotkeys"))
 
+        hint = QLabel("Use format: ctrl+F9, ctrl+F8, etc.")
+        hint.setStyleSheet("color: #667799; font-size: 10px;")
+        layout.addWidget(hint)
+
         row1 = QHBoxLayout()
         row1.addWidget(QLabel("Translate:"))
         self.hotkey_input = QLineEdit()
-        self.hotkey_input.setPlaceholderText("e.g. F9")
-        self.hotkey_input.setFixedWidth(100)
+        self.hotkey_input.setPlaceholderText("e.g. ctrl+F9")
+        self.hotkey_input.setFixedWidth(120)
         row1.addWidget(self.hotkey_input)
         row1.addStretch()
         layout.addLayout(row1)
@@ -157,8 +212,8 @@ class SettingsWindow(QDialog):
         row2 = QHBoxLayout()
         row2.addWidget(QLabel("Show / Hide overlay:"))
         self.hotkey_hide_input = QLineEdit()
-        self.hotkey_hide_input.setPlaceholderText("e.g. F8")
-        self.hotkey_hide_input.setFixedWidth(100)
+        self.hotkey_hide_input.setPlaceholderText("e.g. ctrl+F8")
+        self.hotkey_hide_input.setFixedWidth(120)
         row2.addWidget(self.hotkey_hide_input)
         row2.addStretch()
         layout.addLayout(row2)
@@ -256,11 +311,6 @@ class SettingsWindow(QDialog):
         interval_row.addStretch()
         layout.addLayout(interval_row)
 
-        layout.addWidget(self._sep())
-
-        self.sound_check = QCheckBox("Play sound when translation is ready")
-        layout.addWidget(self.sound_check)
-
         layout.addStretch()
         return w
 
@@ -346,8 +396,8 @@ class SettingsWindow(QDialog):
     def _load_values(self):
         s = self.settings
         self.api_key_input.setText(s.get("api_key", ""))
-        self.hotkey_input.setText(s.get("hotkey", "F9"))
-        self.hotkey_hide_input.setText(s.get("hotkey_hide_overlay", "F8"))
+        self.hotkey_input.setText(s.get("hotkey", "ctrl+F9"))
+        self.hotkey_hide_input.setText(s.get("hotkey_hide_overlay", "ctrl+F8"))
 
         ov = s.get("overlay", {})
         self.border_width_spin.setValue(ov.get("border_width", 3))
@@ -368,14 +418,13 @@ class SettingsWindow(QDialog):
 
         ui = s.get("ui", {})
         self.font_size_spin.setValue(ui.get("font_size", 11))
-        self.sound_check.setChecked(ui.get("sound_on_translate", False))
         self.autostart_check.setChecked(ui.get("autostart_with_windows", False))
 
     def _save(self):
         s = self.settings
         s["api_key"] = self.api_key_input.text().strip()
-        s["hotkey"] = self.hotkey_input.text().strip() or "F9"
-        s["hotkey_hide_overlay"] = self.hotkey_hide_input.text().strip() or "F8"
+        s["hotkey"] = self.hotkey_input.text().strip() or "ctrl+F9"
+        s["hotkey_hide_overlay"] = self.hotkey_hide_input.text().strip() or "ctrl+F8"
 
         s["overlay"]["border_color"] = self._border_color
         s["overlay"]["border_width"] = self.border_width_spin.value()
@@ -390,7 +439,6 @@ class SettingsWindow(QDialog):
         s["history"]["folder"] = self.history_folder_input.text().strip()
 
         s["ui"]["font_size"] = self.font_size_spin.value()
-        s["ui"]["sound_on_translate"] = self.sound_check.isChecked()
         s["ui"]["autostart_with_windows"] = self.autostart_check.isChecked()
 
         # Handle autostart registry

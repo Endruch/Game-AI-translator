@@ -25,9 +25,9 @@ DEFAULT_SETTINGS = {
         "#4169FF": True,  # Royal Blue
     },
 
-    # Hotkeys (use + for combinations, e.g. "shift+F9")
-    "hotkey": "shift+F9",
-    "hotkey_hide_overlay": "shift+F8",
+    # Hotkeys (use + for combinations, e.g. "ctrl+F9")
+    "hotkey": "ctrl+F9",
+    "hotkey_hide_overlay": "ctrl+F8",
 
     # Overlay (Window 1) appearance and position
     "overlay": {

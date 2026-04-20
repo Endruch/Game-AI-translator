@@ -16,7 +16,7 @@ def translate_text(text: str, source_language: str, target_language: str, api_ke
         return ""
 
     if not api_key.strip():
-        return "[Error] API key is not set. Please open Settings."
+        return "Please enter your API key in Settings (⚙)"
 
     try:
         client = anthropic.Anthropic(api_key=api_key)

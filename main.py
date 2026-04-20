@@ -4,11 +4,6 @@ Manages all windows, hotkeys, auto-translate timer, history logging.
 """
 
 import sys
-try:
-    import winsound
-except ImportError:
-    winsound = None  # Not on Windows
-
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QWidget
 from PyQt6.QtGui import QIcon, QPixmap, QColor
 from PyQt6.QtCore import QThread, pyqtSignal, QObject, QTimer, QEvent
@@ -179,8 +174,8 @@ class App:
             except Exception: pass
         self._hotkeys.clear()
 
-        translate_key = self.settings.get("hotkey", "F9")
-        hide_key      = self.settings.get("hotkey_hide_overlay", "F8")
+        translate_key = self.settings.get("hotkey", "ctrl+F9")
+        hide_key      = self.settings.get("hotkey_hide_overlay", "ctrl+F8")
 
         try:
             h1 = keyboard.add_hotkey(translate_key, self._on_translate_hotkey)
@@ -228,7 +223,6 @@ class App:
 
     def _on_translation_done(self, original: str, translated: str):
         self.translator_win.show_translation(translated)
-        self._play_sound()
         self._save_to_history(original, translated)
 
     # ── Auto-translate ────────────────────────────────────
@@ -272,15 +266,6 @@ class App:
     def _save_to_history(self, original: str, translated: str):
         target_lang = self.translator_win.get_selected_target_language()
         log_translation(original, translated, target_lang, self.settings)
-
-    # ── Sound ─────────────────────────────────────────────
-    def _play_sound(self):
-        if self.settings.get("ui", {}).get("sound_on_translate", False):
-            try:
-                if winsound:
-                    winsound.MessageBeep(winsound.MB_OK)
-            except Exception:
-                pass
 
     # ── Settings ──────────────────────────────────────────
     def _open_settings(self):

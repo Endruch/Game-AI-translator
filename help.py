@@ -67,6 +67,7 @@ class HelpWindow(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._drag_pos = None
         self._setup_window()
         self._build_ui()
 
@@ -74,14 +75,29 @@ class HelpWindow(QDialog):
         self.setWindowTitle("Help — Game Translator")
         self.setWindowFlags(
             Qt.WindowType.Dialog |
+            Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint
         )
         self.resize(500, 550)
         self.setStyleSheet("""
-            QDialog { background: #12121c; color: white; }
+            QDialog { background: #12121c; color: white; border: 2px solid rgba(100,100,180,150); border-radius: 8px; }
             QScrollArea { background: transparent; border: none; }
             QWidget#scroll_content { background: transparent; }
         """)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and event.position().y() < 50:
+            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.MouseButton.LeftButton and self._drag_pos:
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+        super().mouseReleaseEvent(event)
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -91,13 +107,35 @@ class HelpWindow(QDialog):
         # Header
         header = QFrame()
         header.setFixedHeight(50)
-        header.setStyleSheet("background: rgba(40,40,70,220); border-bottom: 1px solid rgba(100,100,180,100);")
-        h_layout = QVBoxLayout(header)
-        h_layout.setContentsMargins(20, 0, 20, 0)
+        header.setStyleSheet("background: rgba(30,30,50,220); border-bottom: 2px solid rgba(100,100,180,100);")
+        h_layout = QHBoxLayout(header)
+        h_layout.setContentsMargins(20, 0, 8, 0)
+
         title = QLabel("❓ Help & Guide")
         title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
         title.setStyleSheet("color: #aaaaff;")
         h_layout.addWidget(title)
+        h_layout.addStretch()
+
+        close_btn = QPushButton("✕")
+        close_btn.setFixedSize(32, 32)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                color: #888;
+                border: none;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: rgba(200,50,50,180);
+                color: white;
+                border-radius: 4px;
+            }
+        """)
+        close_btn.clicked.connect(self.accept)
+        h_layout.addWidget(close_btn)
+
         layout.addWidget(header)
 
         # Scrollable content
