@@ -73,8 +73,10 @@ def get_documents_folder() -> Path:
 
 def get_history_folder(settings: dict) -> Path:
     custom = settings.get("history", {}).get("folder", "")
-    if custom and Path(custom).exists():
-        return Path(custom)
+    if custom:
+        custom_path = Path(custom)
+        if custom_path.exists() and custom_path.is_dir():
+            return custom_path
     folder = get_documents_folder() / "GameTranslator"
     folder.mkdir(parents=True, exist_ok=True)
     return folder

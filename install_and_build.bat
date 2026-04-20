@@ -30,13 +30,11 @@ if exist dist rmdir /s /q dist
 if exist *.spec del /q *.spec
 
 if exist "assets\icon.ico" (
-    set ICON_PARAM=--icon=assets\icon.ico
+    pyinstaller --onefile --windowed --name "GameTranslator" --icon=assets\icon.ico --collect-all winrt --hidden-import anthropic --hidden-import keyboard --hidden-import PIL main.py
 ) else (
-    echo [WARNING] Icon not found
-    set ICON_PARAM=
+    echo [WARNING] Icon not found, building without icon
+    pyinstaller --onefile --windowed --name "GameTranslator" --collect-all winrt --hidden-import anthropic --hidden-import keyboard --hidden-import PIL main.py
 )
-
-pyinstaller --onefile --windowed --name "GameTranslator" %ICON_PARAM% --collect-all winrt --hidden-import anthropic --hidden-import keyboard --hidden-import PIL main.py
 
 if errorlevel 1 (
     echo.

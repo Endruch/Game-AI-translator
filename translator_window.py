@@ -236,7 +236,7 @@ class TranslatorWindow(DraggableWidget):
         content_row.addWidget(self.text_output)
 
         # ── Status bar ──
-        self._status_label = QLabel("Ready  |  Press F9 or click Translate")
+        self._status_label = QLabel("Ready")
         self._status_label.setFixedHeight(22)
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._status_label.setStyleSheet(
@@ -284,15 +284,22 @@ class TranslatorWindow(DraggableWidget):
             self.target_lang_combo.setCurrentIndex(index)
 
         self._update_font()
+        self._update_status_with_hotkey()
 
     def _update_font(self):
         size = self.settings.get("ui", {}).get("font_size", 11)
         self.text_output.setFont(QFont("Segoe UI", size))
 
+    def _update_status_with_hotkey(self):
+        hotkey = self.settings.get("hotkey", "Shift+F9")
+        self.set_status(f"Ready  |  Press {hotkey} or click Translate")
+
     def apply_new_settings(self, settings: dict):
         """Called when settings are saved — apply changes live"""
         self.settings = settings
         self._apply_settings()
+        self._set_placeholder()
+        self._update_status_with_hotkey()
 
     def set_auto_translate_indicator(self, enabled: bool):
         """Show/hide green dot in title bar for auto-translate state"""
@@ -309,10 +316,11 @@ class TranslatorWindow(DraggableWidget):
         self._grip.move(self.width() - 16, self.height() - 16)
 
     def _set_placeholder(self):
+        hotkey = self.settings.get("hotkey", "Shift+F9")
         self.text_output.setPlaceholderText(
             "Translation will appear here...\n\n"
             "1. Position the green frame over the game chat\n"
-            "2. Press Shift+F9 (or your hotkey) to translate"
+            f"2. Press {hotkey} to translate"
         )
 
     def set_status(self, text: str, color: str = "rgba(150,150,200,180)"):
@@ -345,6 +353,8 @@ class TranslatorWindow(DraggableWidget):
 
     def save_geometry_to_settings(self):
         geo = self.geometry()
+        if "translator_window" not in self.settings:
+            self.settings["translator_window"] = {}
         self.settings["translator_window"]["x"] = geo.x()
         self.settings["translator_window"]["y"] = geo.y()
         self.settings["translator_window"]["width"] = geo.width()

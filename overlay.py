@@ -1,15 +1,15 @@
-from PyQt6.QtWidgets import QWidget, QSizeGrip, QLabel, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import QSizeGrip, QLabel, QPushButton, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt, QRect, pyqtSignal
 from PyQt6.QtGui import QPainter, QColor, QPen, QFont
+from ui_base import DraggableWidget
 
 
-class OverlayWindow(QWidget):
+class OverlayWindow(DraggableWidget):
     geometry_changed = pyqtSignal()
 
     def __init__(self, settings: dict):
         super().__init__()
         self.settings = settings
-        self._drag_pos = None
         self._locked = False
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
@@ -84,18 +84,20 @@ class OverlayWindow(QWidget):
         painter.drawRect(border_width // 2, border_width // 2, self.width() - border_width, self.height() - border_width)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and not self._locked and event.position().y() <= 24:
-            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        if not self._locked and event.position().y() <= 24:
+            super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton and self._drag_pos and not self._locked:
-            self.move(event.globalPosition().toPoint() - self._drag_pos)
+        if not self._locked:
+            super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        self._drag_pos = None
+        super().mouseReleaseEvent(event)
 
     def save_geometry_to_settings(self):
         geo = self.geometry()
+        if "overlay" not in self.settings:
+            self.settings["overlay"] = {}
         self.settings["overlay"]["x"] = geo.x()
         self.settings["overlay"]["y"] = geo.y()
         self.settings["overlay"]["width"] = geo.width()

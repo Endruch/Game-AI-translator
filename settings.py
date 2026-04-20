@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QColorDialog, QMessageBox, QCheckBox, QTabWidget,
     QWidget, QFileDialog, QDoubleSpinBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QEvent
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QKeyEvent
 
 from config import save_settings, get_history_folder
@@ -57,7 +57,7 @@ class HotkeyLineEdit(QLineEdit):
             parts.append("alt")
 
         # Get key name
-        key_name = QKeyEvent(event).text()
+        key_name = event.text()
         if not key_name:
             key_name = event.key()
             # Convert special keys
@@ -72,7 +72,7 @@ class HotkeyLineEdit(QLineEdit):
             key_name = key_map.get(key_name, "")
 
         if key_name:
-            parts.append(key_name.upper() if len(key_name) == 1 else key_name)
+            parts.append(key_name)
             self.setText("+".join(parts))
 
     def focusInEvent(self, event):
@@ -472,7 +472,8 @@ class SettingsWindow(QDialog):
         self.border_width_spin.setValue(ov.get("border_width", 3))
 
         tw = s.get("translator_window", {})
-        opacity_pct = round(tw.get("opacity", 230) / 255 * 100)
+        opacity_val = tw.get("opacity", 230)
+        opacity_pct = round((opacity_val / 255.0) * 100)
         self.opacity_spin.setValue(opacity_pct)
 
         at = s.get("auto_translate", {})
@@ -498,7 +499,8 @@ class SettingsWindow(QDialog):
         s["overlay"]["border_color"] = self._border_color
         s["overlay"]["border_width"] = self.border_width_spin.value()
 
-        opacity_val = round(self.opacity_spin.value() / 100 * 255)
+        opacity_pct = self.opacity_spin.value()
+        opacity_val = round((opacity_pct / 100.0) * 255)
         s["translator_window"]["opacity"] = opacity_val
 
         s["auto_translate"]["enabled"] = self.auto_enabled_check.isChecked()
@@ -521,6 +523,9 @@ class SettingsWindow(QDialog):
 
     def _apply_autostart(self, enabled: bool):
         """Add or remove program from Windows startup via registry"""
+        import logging
+        logger = logging.getLogger(__name__)
+
         try:
             import winreg
             import sys
@@ -528,16 +533,23 @@ class SettingsWindow(QDialog):
             key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path,
                                  0, winreg.KEY_SET_VALUE)
             if enabled:
-                exe_path = sys.executable
+                if getattr(sys, 'frozen', False):
+                    exe_path = sys.executable
+                else:
+                    exe_path = f'"{sys.executable}" "{sys.argv[0]}"'
                 winreg.SetValueEx(key, "GameTranslator", 0, winreg.REG_SZ, exe_path)
+                logger.info(f"Added to Windows startup: {exe_path}")
             else:
                 try:
                     winreg.DeleteValue(key, "GameTranslator")
+                    logger.info("Removed from Windows startup")
                 except FileNotFoundError:
-                    pass
+                    logger.debug("Startup entry not found (already removed)")
             winreg.CloseKey(key)
+        except PermissionError as e:
+            logger.error(f"Permission denied setting autostart: {e}")
         except Exception as e:
-            print(f"[Autostart] {e}")
+            logger.error(f"Failed to set autostart: {e}")
 
     def _pick_color(self):
         color = QColorDialog.getColor(QColor(self._border_color), self, "Choose Border Color")
@@ -566,11 +578,17 @@ class SettingsWindow(QDialog):
 
     def _open_history_folder(self):
         import subprocess
+        import logging
+        logger = logging.getLogger(__name__)
+
         folder = get_history_folder(self.settings)
         try:
-            subprocess.Popen(f'explorer "{folder}"')
-        except Exception:
-            pass
+            subprocess.Popen(['explorer', str(folder)])
+            logger.info(f"Opened folder: {folder}")
+        except FileNotFoundError as e:
+            logger.error(f"Explorer not found: {e}")
+        except Exception as e:
+            logger.error(f"Failed to open folder: {e}")
 
     # ─────────────────────────────────────────────
     # Helpers
