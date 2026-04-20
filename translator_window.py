@@ -369,10 +369,11 @@ class TranslatorWindow(QWidget):
             color_filters = {
                 "#FFFFFF": True,
                 "#FFD700": True,
-                "#C8C8C8": True,
+                "#00FF00": True,
+                "#FF8C00": True,
+                "#A0A0A0": True,
                 "#00BFFF": True,
-                "#00FF7F": True,
-                "#87CEEB": True,
+                "#00E5FF": True,
                 "#4169FF": True,
             }
             self.settings["color_filters"] = color_filters
@@ -382,10 +383,11 @@ class TranslatorWindow(QWidget):
             color_filters = {
                 "#FFFFFF": True,
                 "#FFD700": True,
-                "#C8C8C8": True,
+                "#00FF00": True,
+                "#FF8C00": True,
+                "#A0A0A0": True,
                 "#00BFFF": True,
-                "#00FF7F": True,
-                "#87CEEB": True,
+                "#00E5FF": True,
                 "#4169FF": True,
             }
             self.settings["color_filters"] = color_filters

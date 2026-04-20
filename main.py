@@ -301,8 +301,8 @@ class App:
 
     # ── Window management ─────────────────────────────────
     def _open_help(self):
-        if not self.help_win:
-            self.help_win = HelpWindow(self.translator_win)
+        # Always create a new instance to avoid showing closed/deleted windows
+        self.help_win = HelpWindow(self.translator_win)
         self.help_win.show()
         self.help_win.raise_()
 

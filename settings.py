@@ -10,10 +10,81 @@ from PyQt6.QtWidgets import (
     QColorDialog, QMessageBox, QCheckBox, QTabWidget,
     QWidget, QFileDialog, QDoubleSpinBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt, pyqtSignal, QEvent
+from PyQt6.QtGui import QFont, QColor, QKeyEvent
 
 from config import save_settings, get_history_folder
+
+
+class HotkeyLineEdit(QLineEdit):
+    """Custom QLineEdit that captures key presses for hotkey configuration"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setPlaceholderText("Click and press key combination...")
+        self.setReadOnly(True)
+        self.setStyleSheet("""
+            QLineEdit {
+                background: rgba(40,40,70,200);
+                color: white;
+                border: 1px solid rgba(100,100,180,150);
+                border-radius: 4px;
+                padding: 4px 8px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #6688ff;
+                background: rgba(50,50,90,220);
+            }
+        """)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        """Capture key press and convert to hotkey string"""
+        key = event.key()
+
+        # Ignore modifier keys alone
+        if key in (Qt.Key.Key_Control, Qt.Key.Key_Shift, Qt.Key.Key_Alt, Qt.Key.Key_Meta):
+            return
+
+        # Build hotkey string
+        parts = []
+        modifiers = event.modifiers()
+
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
+            parts.append("ctrl")
+        if modifiers & Qt.KeyboardModifier.ShiftModifier:
+            parts.append("shift")
+        if modifiers & Qt.KeyboardModifier.AltModifier:
+            parts.append("alt")
+
+        # Get key name
+        key_name = QKeyEvent(event).text()
+        if not key_name:
+            key_name = event.key()
+            # Convert special keys
+            key_map = {
+                Qt.Key.Key_F1: "F1", Qt.Key.Key_F2: "F2", Qt.Key.Key_F3: "F3",
+                Qt.Key.Key_F4: "F4", Qt.Key.Key_F5: "F5", Qt.Key.Key_F6: "F6",
+                Qt.Key.Key_F7: "F7", Qt.Key.Key_F8: "F8", Qt.Key.Key_F9: "F9",
+                Qt.Key.Key_F10: "F10", Qt.Key.Key_F11: "F11", Qt.Key.Key_F12: "F12",
+                Qt.Key.Key_Space: "space", Qt.Key.Key_Return: "enter",
+                Qt.Key.Key_Escape: "esc", Qt.Key.Key_Tab: "tab",
+            }
+            key_name = key_map.get(key_name, "")
+
+        if key_name:
+            parts.append(key_name.upper() if len(key_name) == 1 else key_name)
+            self.setText("+".join(parts))
+
+    def focusInEvent(self, event):
+        """Clear text when focused"""
+        self.setPlaceholderText("Press key combination...")
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event):
+        """Restore placeholder when unfocused"""
+        if not self.text():
+            self.setPlaceholderText("Click and press key combination...")
+        super().focusOutEvent(event)
 
 
 class SettingsWindow(QDialog):
@@ -196,24 +267,22 @@ class SettingsWindow(QDialog):
         # Hotkeys
         layout.addWidget(self._section("Hotkeys"))
 
-        hint = QLabel("Use format: ctrl+F9, ctrl+F8, etc.")
+        hint = QLabel("Click on field and press key combination")
         hint.setStyleSheet("color: #667799; font-size: 10px;")
         layout.addWidget(hint)
 
         row1 = QHBoxLayout()
         row1.addWidget(QLabel("Translate:"))
-        self.hotkey_input = QLineEdit()
-        self.hotkey_input.setPlaceholderText("e.g. ctrl+F9")
-        self.hotkey_input.setFixedWidth(120)
+        self.hotkey_input = HotkeyLineEdit()
+        self.hotkey_input.setFixedWidth(200)
         row1.addWidget(self.hotkey_input)
         row1.addStretch()
         layout.addLayout(row1)
 
         row2 = QHBoxLayout()
-        row2.addWidget(QLabel("Show / Hide overlay:"))
-        self.hotkey_hide_input = QLineEdit()
-        self.hotkey_hide_input.setPlaceholderText("e.g. ctrl+F8")
-        self.hotkey_hide_input.setFixedWidth(120)
+        row2.addWidget(QLabel("Show/Hide overlay:"))
+        self.hotkey_hide_input = HotkeyLineEdit()
+        self.hotkey_hide_input.setFixedWidth(200)
         row2.addWidget(self.hotkey_hide_input)
         row2.addStretch()
         layout.addLayout(row2)
@@ -396,8 +465,8 @@ class SettingsWindow(QDialog):
     def _load_values(self):
         s = self.settings
         self.api_key_input.setText(s.get("api_key", ""))
-        self.hotkey_input.setText(s.get("hotkey", "ctrl+F9"))
-        self.hotkey_hide_input.setText(s.get("hotkey_hide_overlay", "ctrl+F8"))
+        self.hotkey_input.setText(s.get("hotkey", "shift+F9"))
+        self.hotkey_hide_input.setText(s.get("hotkey_hide_overlay", "shift+F8"))
 
         ov = s.get("overlay", {})
         self.border_width_spin.setValue(ov.get("border_width", 3))
@@ -423,8 +492,8 @@ class SettingsWindow(QDialog):
     def _save(self):
         s = self.settings
         s["api_key"] = self.api_key_input.text().strip()
-        s["hotkey"] = self.hotkey_input.text().strip() or "ctrl+F9"
-        s["hotkey_hide_overlay"] = self.hotkey_hide_input.text().strip() or "ctrl+F8"
+        s["hotkey"] = self.hotkey_input.text().strip() or "shift+F9"
+        s["hotkey_hide_overlay"] = self.hotkey_hide_input.text().strip() or "shift+F8"
 
         s["overlay"]["border_color"] = self._border_color
         s["overlay"]["border_width"] = self.border_width_spin.value()

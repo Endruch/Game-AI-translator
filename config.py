@@ -16,18 +16,19 @@ DEFAULT_SETTINGS = {
 
     # Color filters - predefined chat text colors
     "color_filters": {
-        "#FFFFFF": True,  # White
-        "#FFD700": True,  # Gold
-        "#C8C8C8": True,  # Gray
-        "#00BFFF": True,  # Deep Sky Blue
-        "#00FF7F": True,  # Spring Green
-        "#87CEEB": True,  # Sky Blue
-        "#4169FF": True,  # Royal Blue
+        "#FFFFFF": True,
+        "#FFD700": True,
+        "#00FF00": True,
+        "#FF8C00": True,
+        "#A0A0A0": True,
+        "#00BFFF": True,
+        "#00E5FF": True,
+        "#4169FF": True,
     },
 
-    # Hotkeys (use + for combinations, e.g. "ctrl+F9")
-    "hotkey": "ctrl+F9",
-    "hotkey_hide_overlay": "ctrl+F8",
+    # Hotkeys (use + for combinations, e.g. "shift+F9")
+    "hotkey": "shift+F9",
+    "hotkey_hide_overlay": "shift+F8",
 
     # Overlay (Window 1) appearance and position
     "overlay": {
