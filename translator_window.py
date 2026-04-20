@@ -3,17 +3,15 @@ translator_window.py - Translation output window (Window 2)
 Shows translated text, language selector, status bar, and controls.
 """
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QTextEdit, QComboBox, QPushButton, QFrame, QSizeGrip, QCheckBox, QScrollArea
-)
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QComboBox, QPushButton, QFrame, QSizeGrip, QCheckBox, QScrollArea
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QFont
 
 from config import SUPPORTED_LANGUAGES, SOURCE_LANGUAGES
+from ui_base import DraggableWidget
 
 
-class TranslatorWindow(QWidget):
+class TranslatorWindow(DraggableWidget):
     """Main translation output window — frameless, always on top."""
 
     translate_requested = pyqtSignal()
@@ -26,12 +24,11 @@ class TranslatorWindow(QWidget):
     def __init__(self, settings: dict):
         super().__init__()
         self.settings = settings
-        self._drag_pos = None
-        self._color_checkboxes = {}  # {hex_color: QCheckBox}
+        self._color_checkboxes = {}
         self._setup_window()
         self._build_ui()
         self._apply_settings()
-        self._init_color_filters()  # Initialize predefined colors
+        self._init_color_filters()
 
     def _setup_window(self):
         self.setWindowTitle("Game Translator")
@@ -315,7 +312,7 @@ class TranslatorWindow(QWidget):
         self.text_output.setPlaceholderText(
             "Translation will appear here...\n\n"
             "1. Position the green frame over the game chat\n"
-            "2. Press F9 (or your hotkey) to translate"
+            "2. Press Shift+F9 (or your hotkey) to translate"
         )
 
     def set_status(self, text: str, color: str = "rgba(150,150,200,180)"):
@@ -444,15 +441,3 @@ class TranslatorWindow(QWidget):
         for hex_color, checkbox in self._color_checkboxes.items():
             color_filters[hex_color] = checkbox.isChecked()
         self.settings["color_filters"] = color_filters
-
-    # ── Drag to move ──
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton and self._drag_pos:
-            self.move(event.globalPosition().toPoint() - self._drag_pos)
-
-    def mouseReleaseEvent(self, event):
-        self._drag_pos = None
