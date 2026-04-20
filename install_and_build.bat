@@ -28,6 +28,9 @@ echo.
 if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 if exist *.spec del /q *.spec
+if exist __pycache__ rmdir /s /q __pycache__
+for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d"
+del /s /q *.pyc 2>nul
 
 if exist "assets\icon.ico" (
     pyinstaller --onefile --windowed --name "GameTranslator" --icon=assets\icon.ico --collect-all winrt --hidden-import anthropic --hidden-import keyboard --hidden-import PIL main.py
