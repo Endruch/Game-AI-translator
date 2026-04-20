@@ -4,7 +4,11 @@ Manages all windows, hotkeys, auto-translate timer, history logging.
 """
 
 import sys
-import winsound
+try:
+    import winsound
+except ImportError:
+    winsound = None  # Not on Windows
+
 from PyQt6.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QWidget
 from PyQt6.QtGui import QIcon, QPixmap, QColor
 from PyQt6.QtCore import QThread, pyqtSignal, QObject, QTimer, QEvent
@@ -273,7 +277,8 @@ class App:
     def _play_sound(self):
         if self.settings.get("ui", {}).get("sound_on_translate", False):
             try:
-                winsound.MessageBeep(winsound.MB_OK)
+                if winsound:
+                    winsound.MessageBeep(winsound.MB_OK)
             except Exception:
                 pass
 
@@ -361,5 +366,21 @@ class App:
 
 
 if __name__ == "__main__":
-    app = App()
-    app.run()
+    try:
+        app = App()
+        app.run()
+    except Exception as e:
+        import traceback
+        error_msg = f"Fatal error:\n{str(e)}\n\n{traceback.format_exc()}"
+        print(error_msg)
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setWindowTitle("GameTranslator Error")
+            msg.setText("Application failed to start")
+            msg.setDetailedText(error_msg)
+            msg.exec()
+        except:
+            pass
+        sys.exit(1)

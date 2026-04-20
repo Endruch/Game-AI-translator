@@ -12,9 +12,40 @@ if exist build rmdir /s /q build
 if exist dist rmdir /s /q dist
 if exist *.spec del /q *.spec
 
-REM Build (--noconsole removes console window!)
-pyinstaller --onefile --noconsole --name "GameTranslator" --icon=assets\icon.ico --collect-all winrt main.py
+echo.
+echo Checking if icon exists...
+if exist "assets\icon.ico" (
+    echo [OK] Icon found
+    set ICON_PARAM=--icon=assets\icon.ico
+) else (
+    echo [WARNING] Icon not found - building without icon
+    set ICON_PARAM=
+)
 
 echo.
-echo Done! EXE location: dist\GameTranslator.exe
+echo Building with PyInstaller...
+echo.
+
+REM Build with console for debugging (change --onedir to --onefile for single exe)
+pyinstaller --onefile --windowed --name "GameTranslator" %ICON_PARAM% --collect-all winrt --hidden-import anthropic --hidden-import keyboard --hidden-import PIL main.py
+
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Build failed! Check errors above.
+    pause
+    exit /b 1
+)
+
+echo.
+echo ============================================
+echo   Build completed successfully!
+echo ============================================
+echo.
+echo EXE location: dist\GameTranslator.exe
+echo.
+echo If the app crashes on startup:
+echo   1. Check that you're running on Windows 10/11
+echo   2. Make sure all dependencies are installed
+echo   3. Try running from command line to see errors
+echo.
 pause
