@@ -18,7 +18,6 @@ class TranslatorWindow(QWidget):
 
     translate_requested = pyqtSignal()
     settings_requested = pyqtSignal()
-    help_requested     = pyqtSignal()
     quit_requested     = pyqtSignal()  # Request to quit the entire application
     target_language_changed = pyqtSignal(str)
     source_language_changed = pyqtSignal(str)
@@ -159,18 +158,15 @@ class TranslatorWindow(QWidget):
         self.translate_btn.clicked.connect(self.translate_requested.emit)
 
         btn_settings = QPushButton("⚙")
-        btn_help     = QPushButton("?")
-        for btn in [btn_settings, btn_help]:
-            btn.setFixedSize(26, 26)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background: rgba(50,50,80,150); color: #aaa;
-                    border: 1px solid rgba(100,100,180,100); border-radius: 4px; font-size: 13px;
-                }
-                QPushButton:hover { color: white; background: rgba(70,70,110,200); }
-            """)
+        btn_settings.setFixedSize(26, 26)
+        btn_settings.setStyleSheet("""
+            QPushButton {
+                background: rgba(50,50,80,150); color: #aaa;
+                border: 1px solid rgba(100,100,180,100); border-radius: 4px; font-size: 13px;
+            }
+            QPushButton:hover { color: white; background: rgba(70,70,110,200); }
+        """)
         btn_settings.clicked.connect(self.settings_requested.emit)
-        btn_help.clicked.connect(self.help_requested.emit)
 
         ctrl_layout.addWidget(from_label)
         ctrl_layout.addWidget(self.source_lang_combo)
@@ -180,7 +176,6 @@ class TranslatorWindow(QWidget):
         ctrl_layout.addStretch()
         ctrl_layout.addWidget(self.translate_btn)
         ctrl_layout.addWidget(btn_settings)
-        ctrl_layout.addWidget(btn_help)
 
         # ── Main content area (text + color filters) ──
         content_row = QHBoxLayout()

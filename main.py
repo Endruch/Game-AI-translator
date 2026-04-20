@@ -14,7 +14,6 @@ from config import load_settings, save_settings
 from overlay import OverlayWindow
 from translator_window import TranslatorWindow
 from settings import SettingsWindow
-from help import HelpWindow
 from ocr_engine import capture_and_recognize_sync, capture_if_changed, reset_last_text
 from claude_api import translate_text
 from history_logger import log_translation
@@ -119,7 +118,6 @@ class App:
         # Create windows
         self.overlay        = OverlayWindow(self.settings)
         self.translator_win = TranslatorWindow(self.settings)
-        self.help_win       = None
 
         # Patch event handler for hotkey→Qt thread bridging
         self._patch_event_handler()
@@ -136,7 +134,6 @@ class App:
     def _connect_signals(self):
         self.translator_win.translate_requested.connect(self._do_translate)
         self.translator_win.settings_requested.connect(self._open_settings)
-        self.translator_win.help_requested.connect(self._open_help)
         self.translator_win.quit_requested.connect(self._quit)
         self.translator_win.target_language_changed.connect(self._on_target_language_changed)
         self.translator_win.source_language_changed.connect(self._on_source_language_changed)
@@ -300,12 +297,6 @@ class App:
         save_settings(self.settings)
 
     # ── Window management ─────────────────────────────────
-    def _open_help(self):
-        # Always create a new instance to avoid showing closed/deleted windows
-        self.help_win = HelpWindow(self.translator_win)
-        self.help_win.show()
-        self.help_win.raise_()
-
     def _show_all(self):
         self.overlay.show()
         self.overlay.raise_()
