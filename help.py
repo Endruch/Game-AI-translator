@@ -4,10 +4,10 @@ help.py - Help / About window (Window 4)
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton,
-    QScrollArea, QWidget, QFrame
+    QScrollArea, QWidget, QFrame, QHBoxLayout
 )
-from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QFont, QDesktopServices
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 
 
 HELP_TEXT = """
@@ -74,30 +74,34 @@ class HelpWindow(QDialog):
     def _setup_window(self):
         self.setWindowTitle("Help — Game Translator")
         self.setWindowFlags(
-            Qt.WindowType.Dialog |
             Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Tool
         )
-        self.resize(500, 550)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.resize(520, 580)
         self.setStyleSheet("""
-            QDialog { background: #12121c; color: white; border: 2px solid rgba(100,100,180,150); border-radius: 8px; }
+            QDialog {
+                background: #12121c;
+                color: white;
+                border: 2px solid rgba(100,100,180,180);
+                border-radius: 10px;
+            }
             QScrollArea { background: transparent; border: none; }
             QWidget#scroll_content { background: transparent; }
         """)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and event.position().y() < 50:
-            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-        super().mousePressEvent(event)
+        if event.button() == Qt.MouseButton.LeftButton:
+            if event.position().y() < 50:
+                self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton and self._drag_pos:
+        if event.buttons() == Qt.MouseButton.LeftButton and self._drag_pos is not None:
             self.move(event.globalPosition().toPoint() - self._drag_pos)
-        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         self._drag_pos = None
-        super().mouseReleaseEvent(event)
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
@@ -107,9 +111,9 @@ class HelpWindow(QDialog):
         # Header
         header = QFrame()
         header.setFixedHeight(50)
-        header.setStyleSheet("background: rgba(30,30,50,220); border-bottom: 2px solid rgba(100,100,180,100);")
+        header.setStyleSheet("background: rgba(30,30,50,230); border-bottom: 2px solid rgba(100,100,180,120); border-top-left-radius: 10px; border-top-right-radius: 10px;")
         h_layout = QHBoxLayout(header)
-        h_layout.setContentsMargins(20, 0, 8, 0)
+        h_layout.setContentsMargins(20, 0, 12, 0)
 
         title = QLabel("❓ Help & Guide")
         title.setFont(QFont("Segoe UI", 13, QFont.Weight.Bold))
@@ -118,22 +122,22 @@ class HelpWindow(QDialog):
         h_layout.addStretch()
 
         close_btn = QPushButton("✕")
-        close_btn.setFixedSize(32, 32)
+        close_btn.setFixedSize(36, 36)
         close_btn.setStyleSheet("""
             QPushButton {
                 background: transparent;
                 color: #888;
                 border: none;
-                font-size: 18px;
+                font-size: 20px;
                 font-weight: bold;
             }
             QPushButton:hover {
-                background: rgba(200,50,50,180);
+                background: rgba(220,60,60,200);
                 color: white;
-                border-radius: 4px;
+                border-radius: 6px;
             }
         """)
-        close_btn.clicked.connect(self.accept)
+        close_btn.clicked.connect(self.close)
         h_layout.addWidget(close_btn)
 
         layout.addWidget(header)
@@ -141,17 +145,19 @@ class HelpWindow(QDialog):
         # Scrollable content
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         content = QWidget()
         content.setObjectName("scroll_content")
         c_layout = QVBoxLayout(content)
-        c_layout.setContentsMargins(20, 16, 20, 16)
+        c_layout.setContentsMargins(20, 20, 20, 20)
 
         text = QLabel(HELP_TEXT)
         text.setWordWrap(True)
-        text.setOpenExternalLinks(True)
+        text.setOpenExternalLinks(False)
         text.setTextFormat(Qt.TextFormat.RichText)
         text.setFont(QFont("Segoe UI", 10))
+        text.setStyleSheet("line-height: 1.5;")
         c_layout.addWidget(text)
         c_layout.addStretch()
 
@@ -160,29 +166,13 @@ class HelpWindow(QDialog):
 
         # Footer
         footer = QFrame()
-        footer.setFixedHeight(50)
-        footer.setStyleSheet("background: rgba(20,20,40,200); border-top: 1px solid rgba(100,100,180,60);")
-        f_layout = QVBoxLayout(footer)
+        footer.setFixedHeight(48)
+        footer.setStyleSheet("background: rgba(20,20,40,230); border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;")
+        f_layout = QHBoxLayout(footer)
         f_layout.setContentsMargins(20, 0, 20, 0)
 
-        footer_text = QLabel("Game Translator v1.0  •  Powered by Claude AI")
+        footer_text = QLabel("Game Translator v1.0  •  Powered by Claude AI + Windows OCR")
         footer_text.setStyleSheet("color: #555577; font-size: 10px;")
-        footer_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        f_layout.addWidget(footer_text)
+        f_layout.addWidget(footer_text, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        close_btn = QPushButton("Close")
-        close_btn.setFixedSize(80, 28)
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(60,60,100,200);
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: 11px;
-            }
-            QPushButton:hover { background: rgba(80,80,130,220); }
-        """)
-        close_btn.clicked.connect(self.accept)
-
-        f_layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(footer)
