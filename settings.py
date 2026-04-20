@@ -1,8 +1,3 @@
-"""
-settings.py - Settings window (Window 3)
-API key, hotkeys, overlay appearance, auto-translate, history, UI options.
-"""
-
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
@@ -17,8 +12,6 @@ from config import save_settings, get_history_folder
 
 
 class HotkeyLineEdit(QLineEdit):
-    """Custom QLineEdit that captures key presses for hotkey configuration"""
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setPlaceholderText("Click and press key combination...")
@@ -38,14 +31,11 @@ class HotkeyLineEdit(QLineEdit):
         """)
 
     def keyPressEvent(self, event: QKeyEvent):
-        """Capture key press and convert to hotkey string"""
         key = event.key()
 
-        # Ignore modifier keys alone
         if key in (Qt.Key.Key_Control, Qt.Key.Key_Shift, Qt.Key.Key_Alt, Qt.Key.Key_Meta):
             return
 
-        # Build hotkey string
         parts = []
         modifiers = event.modifiers()
 
@@ -56,11 +46,9 @@ class HotkeyLineEdit(QLineEdit):
         if modifiers & Qt.KeyboardModifier.AltModifier:
             parts.append("alt")
 
-        # Get key name
         key_name = event.text()
         if not key_name:
             key_name = event.key()
-            # Convert special keys
             key_map = {
                 Qt.Key.Key_F1: "F1", Qt.Key.Key_F2: "F2", Qt.Key.Key_F3: "F3",
                 Qt.Key.Key_F4: "F4", Qt.Key.Key_F5: "F5", Qt.Key.Key_F6: "F6",
@@ -76,20 +64,16 @@ class HotkeyLineEdit(QLineEdit):
             self.setText("+".join(parts))
 
     def focusInEvent(self, event):
-        """Clear text when focused"""
         self.setPlaceholderText("Press key combination...")
         super().focusInEvent(event)
 
     def focusOutEvent(self, event):
-        """Restore placeholder when unfocused"""
         if not self.text():
             self.setPlaceholderText("Click and press key combination...")
         super().focusOutEvent(event)
 
 
 class SettingsWindow(QDialog):
-    """Settings dialog — tabbed layout for all options"""
-
     settings_saved = pyqtSignal(dict)
 
     def __init__(self, settings: dict, parent=None):
@@ -233,16 +217,12 @@ class SettingsWindow(QDialog):
 
         layout.addWidget(content)
 
-    # ─────────────────────────────────────────────
-    # TAB: General
-    # ─────────────────────────────────────────────
     def _tab_general(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(12)
         layout.setContentsMargins(12, 16, 12, 12)
 
-        # API Key
         layout.addWidget(self._section("Claude API Key"))
         self.api_key_input = QLineEdit()
         self.api_key_input.setPlaceholderText("sk-ant-...")
@@ -264,7 +244,6 @@ class SettingsWindow(QDialog):
 
         layout.addWidget(self._sep())
 
-        # Hotkeys
         layout.addWidget(self._section("Hotkeys"))
 
         hint = QLabel("Click on field and press key combination")
@@ -289,16 +268,12 @@ class SettingsWindow(QDialog):
 
         layout.addWidget(self._sep())
 
-        # Autostart
         self.autostart_check = QCheckBox("Launch with Windows")
         layout.addWidget(self.autostart_check)
 
         layout.addStretch()
         return w
 
-    # ─────────────────────────────────────────────
-    # TAB: Overlay
-    # ─────────────────────────────────────────────
     def _tab_overlay(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
@@ -307,7 +282,6 @@ class SettingsWindow(QDialog):
 
         layout.addWidget(self._section("Capture Frame Appearance"))
 
-        # Border color
         color_row = QHBoxLayout()
         color_row.addWidget(QLabel("Border color:"))
         self.color_preview = QPushButton()
@@ -319,7 +293,6 @@ class SettingsWindow(QDialog):
         color_row.addStretch()
         layout.addLayout(color_row)
 
-        # Border width
         width_row = QHBoxLayout()
         width_row.addWidget(QLabel("Border width (px):"))
         self.border_width_spin = QSpinBox()
@@ -332,7 +305,6 @@ class SettingsWindow(QDialog):
         layout.addWidget(self._sep())
         layout.addWidget(self._section("Translator Window"))
 
-        # Translator window opacity
         opacity_row = QHBoxLayout()
         opacity_row.addWidget(QLabel("Window opacity (%):"))
         self.opacity_spin = QSpinBox()
@@ -346,9 +318,6 @@ class SettingsWindow(QDialog):
         layout.addStretch()
         return w
 
-    # ─────────────────────────────────────────────
-    # TAB: Auto-Translate
-    # ─────────────────────────────────────────────
     def _tab_auto(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
@@ -383,9 +352,6 @@ class SettingsWindow(QDialog):
         layout.addStretch()
         return w
 
-    # ─────────────────────────────────────────────
-    # TAB: History
-    # ─────────────────────────────────────────────
     def _tab_history(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
@@ -436,9 +402,6 @@ class SettingsWindow(QDialog):
         layout.addStretch()
         return w
 
-    # ─────────────────────────────────────────────
-    # TAB: Interface
-    # ─────────────────────────────────────────────
     def _tab_ui(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
@@ -459,9 +422,6 @@ class SettingsWindow(QDialog):
         layout.addStretch()
         return w
 
-    # ─────────────────────────────────────────────
-    # Load / Save
-    # ─────────────────────────────────────────────
     def _load_values(self):
         s = self.settings
         self.api_key_input.setText(s.get("api_key", ""))
@@ -522,10 +482,6 @@ class SettingsWindow(QDialog):
             QMessageBox.warning(self, "Error", "Could not save settings file.")
 
     def _apply_autostart(self, enabled: bool):
-        """Add or remove program from Windows startup via registry"""
-        import logging
-        logger = logging.getLogger(__name__)
-
         try:
             import winreg
             import sys
@@ -538,18 +494,14 @@ class SettingsWindow(QDialog):
                 else:
                     exe_path = f'"{sys.executable}" "{sys.argv[0]}"'
                 winreg.SetValueEx(key, "GameTranslator", 0, winreg.REG_SZ, exe_path)
-                logger.info(f"Added to Windows startup: {exe_path}")
             else:
                 try:
                     winreg.DeleteValue(key, "GameTranslator")
-                    logger.info("Removed from Windows startup")
                 except FileNotFoundError:
-                    logger.debug("Startup entry not found (already removed)")
+                    pass
             winreg.CloseKey(key)
-        except PermissionError as e:
-            logger.error(f"Permission denied setting autostart: {e}")
-        except Exception as e:
-            logger.error(f"Failed to set autostart: {e}")
+        except (PermissionError, Exception):
+            pass
 
     def _pick_color(self):
         color = QColorDialog.getColor(QColor(self._border_color), self, "Choose Border Color")
@@ -578,21 +530,12 @@ class SettingsWindow(QDialog):
 
     def _open_history_folder(self):
         import subprocess
-        import logging
-        logger = logging.getLogger(__name__)
-
         folder = get_history_folder(self.settings)
         try:
             subprocess.Popen(['explorer', str(folder)])
-            logger.info(f"Opened folder: {folder}")
-        except FileNotFoundError as e:
-            logger.error(f"Explorer not found: {e}")
-        except Exception as e:
-            logger.error(f"Failed to open folder: {e}")
+        except (FileNotFoundError, Exception):
+            pass
 
-    # ─────────────────────────────────────────────
-    # Helpers
-    # ─────────────────────────────────────────────
     def _section(self, text: str) -> QLabel:
         label = QLabel(text)
         label.setFont(QFont("Segoe UI", 10, QFont.Weight.Bold))

@@ -1,9 +1,4 @@
-"""
-translator_window.py - Translation output window (Window 2)
-Shows translated text, language selector, status bar, and controls.
-"""
-
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QComboBox, QPushButton, QFrame, QSizeGrip, QCheckBox, QScrollArea
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QComboBox, QPushButton, QFrame, QSizeGrip, QCheckBox, QScrollArea, QWidget
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
 
@@ -12,14 +7,12 @@ from ui_base import DraggableWidget
 
 
 class TranslatorWindow(DraggableWidget):
-    """Main translation output window — frameless, always on top."""
-
     translate_requested = pyqtSignal()
     settings_requested = pyqtSignal()
-    quit_requested     = pyqtSignal()  # Request to quit the entire application
+    quit_requested     = pyqtSignal()
     target_language_changed = pyqtSignal(str)
     source_language_changed = pyqtSignal(str)
-    color_filters_changed = pyqtSignal(list)  # Emits list of enabled color hex strings
+    color_filters_changed = pyqtSignal(list)
 
     def __init__(self, settings: dict):
         super().__init__()
@@ -55,7 +48,6 @@ class TranslatorWindow(DraggableWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # ── Title bar ──
         title_bar = QFrame()
         title_bar.setFixedHeight(36)
         title_bar.setStyleSheet("background: rgba(40,40,70,200); border-radius: 10px 10px 0 0;")
@@ -66,7 +58,6 @@ class TranslatorWindow(DraggableWidget):
         title_label.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
         title_label.setStyleSheet("color: #aaaaff;")
 
-        # Auto-translate indicator dot
         self._auto_dot = QLabel("●")
         self._auto_dot.setStyleSheet("color: #444466; font-size: 10px;")
         self._auto_dot.setToolTip("Auto-translate: OFF")
@@ -88,14 +79,12 @@ class TranslatorWindow(DraggableWidget):
         title_layout.addWidget(btn_min)
         title_layout.addWidget(btn_close)
 
-        # ── Controls bar ──
         controls = QFrame()
         controls.setStyleSheet("background: rgba(25,25,45,180);")
         ctrl_layout = QHBoxLayout(controls)
         ctrl_layout.setContentsMargins(8, 6, 8, 6)
         ctrl_layout.setSpacing(6)
 
-        # Source language selector
         from_label = QLabel("From:")
         from_label.setStyleSheet("color: #888; font-size: 11px;")
 
@@ -116,11 +105,9 @@ class TranslatorWindow(DraggableWidget):
         """)
         self.source_lang_combo.currentTextChanged.connect(self.source_language_changed.emit)
 
-        # Arrow between languages
         arrow_label = QLabel("→")
         arrow_label.setStyleSheet("color: #6688ff; font-size: 16px; font-weight: bold;")
 
-        # Target language selector
         to_label = QLabel("To:")
         to_label.setStyleSheet("color: #888; font-size: 11px;")
 
@@ -174,12 +161,10 @@ class TranslatorWindow(DraggableWidget):
         ctrl_layout.addWidget(self.translate_btn)
         ctrl_layout.addWidget(btn_settings)
 
-        # ── Main content area (text + color filters) ──
         content_row = QHBoxLayout()
         content_row.setSpacing(0)
         content_row.setContentsMargins(0, 0, 0, 0)
 
-        # Color filters panel (left side)
         self._color_panel = QFrame()
         self._color_panel.setFixedWidth(50)
         self._color_panel.setStyleSheet("background: rgba(15,15,25,200); border-right: 1px solid rgba(100,100,180,80);")
@@ -187,14 +172,12 @@ class TranslatorWindow(DraggableWidget):
         color_panel_layout.setContentsMargins(4, 8, 4, 4)
         color_panel_layout.setSpacing(6)
 
-        # Title for color filters
         filter_label = QLabel("🎨")
         filter_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         filter_label.setStyleSheet("color: #888; font-size: 12px;")
         filter_label.setToolTip("Color Filters\nCheck colors to translate")
         color_panel_layout.addWidget(filter_label)
 
-        # Scroll area for color checkboxes
         self._color_scroll = QScrollArea()
         self._color_scroll.setWidgetResizable(True)
         self._color_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -215,7 +198,6 @@ class TranslatorWindow(DraggableWidget):
 
         content_row.addWidget(self._color_panel)
 
-        # Text output (right side)
         self.text_output = QTextEdit()
         self.text_output.setReadOnly(True)
         self.text_output.setStyleSheet("""
@@ -235,7 +217,6 @@ class TranslatorWindow(DraggableWidget):
 
         content_row.addWidget(self.text_output)
 
-        # ── Status bar ──
         self._status_label = QLabel("Ready")
         self._status_label.setFixedHeight(22)
         self._status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -262,7 +243,6 @@ class TranslatorWindow(DraggableWidget):
             tw.get("x", 550), tw.get("y", 100),
             tw.get("width", 400), tw.get("height", 300)
         )
-        # Apply opacity
         opacity = tw.get("opacity", 230)
         self._container.setStyleSheet(f"""
             #container {{
@@ -271,13 +251,11 @@ class TranslatorWindow(DraggableWidget):
                 border-radius: 10px;
             }}
         """)
-        # Set source language
         source_lang = self.settings.get("source_language", "Auto-detect")
         index = self.source_lang_combo.findText(source_lang)
         if index >= 0:
             self.source_lang_combo.setCurrentIndex(index)
 
-        # Set target language
         target_lang = self.settings.get("target_language", "Russian")
         index = self.target_lang_combo.findText(target_lang)
         if index >= 0:
@@ -295,14 +273,12 @@ class TranslatorWindow(DraggableWidget):
         self.set_status(f"Ready  |  Press {hotkey} or click Translate")
 
     def apply_new_settings(self, settings: dict):
-        """Called when settings are saved — apply changes live"""
         self.settings = settings
         self._apply_settings()
         self._set_placeholder()
         self._update_status_with_hotkey()
 
     def set_auto_translate_indicator(self, enabled: bool):
-        """Show/hide green dot in title bar for auto-translate state"""
         if enabled:
             self._auto_dot.setStyleSheet("color: #44ff88; font-size: 10px;")
             self._auto_dot.setToolTip("Auto-translate: ON")
@@ -360,14 +336,10 @@ class TranslatorWindow(DraggableWidget):
         self.settings["translator_window"]["width"] = geo.width()
         self.settings["translator_window"]["height"] = geo.height()
 
-    # ── Color filters ──
     def _init_color_filters(self):
-        """Initialize predefined color filters from settings"""
         color_filters = self.settings.get("color_filters", {})
 
-        # Handle old format (list) - convert to new format (dict)
         if isinstance(color_filters, list):
-            # Old format was a list, convert to dict with all enabled
             color_filters = {
                 "#FFFFFF": True,
                 "#FFD700": True,
@@ -380,7 +352,6 @@ class TranslatorWindow(DraggableWidget):
             }
             self.settings["color_filters"] = color_filters
 
-        # If empty dict, use defaults
         if not color_filters:
             color_filters = {
                 "#FFFFFF": True,
@@ -398,11 +369,9 @@ class TranslatorWindow(DraggableWidget):
             self._add_color_checkbox(hex_color, enabled)
 
     def _add_color_checkbox(self, hex_color: str, checked: bool = True):
-        """Add a color checkbox to the filter panel"""
         if hex_color in self._color_checkboxes:
-            return  # Already exists
+            return
 
-        # Create checkbox for this color
         checkbox = QCheckBox()
         checkbox.setChecked(checked)
         checkbox.setFixedSize(38, 24)
@@ -429,12 +398,10 @@ class TranslatorWindow(DraggableWidget):
         checkbox.setToolTip(f"Color: {hex_color}\nClick to toggle filter")
         checkbox.stateChanged.connect(self._on_color_filter_changed)
 
-        # Add to layout (before stretch)
         self._color_layout.insertWidget(self._color_layout.count() - 1, checkbox)
         self._color_checkboxes[hex_color] = checkbox
 
     def get_enabled_color_filters(self) -> list:
-        """Returns list of hex colors that are currently enabled"""
         enabled = []
         for hex_color, checkbox in self._color_checkboxes.items():
             if checkbox.isChecked():
@@ -442,11 +409,9 @@ class TranslatorWindow(DraggableWidget):
         return enabled
 
     def _on_color_filter_changed(self):
-        """Emits signal when color filter state changes"""
         enabled = self.get_enabled_color_filters()
         self.color_filters_changed.emit(enabled)
 
-        # Save state to settings
         color_filters = {}
         for hex_color, checkbox in self._color_checkboxes.items():
             color_filters[hex_color] = checkbox.isChecked()
