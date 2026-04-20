@@ -33,10 +33,10 @@ for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d"
 del /s /q *.pyc 2>nul
 
 if exist "assets\icon.ico" (
-    pyinstaller --onefile --windowed --name "GameTranslator" --icon=assets\icon.ico --collect-all winrt --hidden-import anthropic --hidden-import keyboard --hidden-import PIL main.py
+    pyinstaller --onefile --windowed --name "GameTranslator" --icon=assets\icon.ico --collect-all winrt --collect-all PyQt6 --hidden-import anthropic --hidden-import keyboard --hidden-import PIL --hidden-import PyQt6.QtWidgets --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui main.py
 ) else (
     echo [WARNING] Icon not found, building without icon
-    pyinstaller --onefile --windowed --name "GameTranslator" --collect-all winrt --hidden-import anthropic --hidden-import keyboard --hidden-import PIL main.py
+    pyinstaller --onefile --windowed --name "GameTranslator" --collect-all winrt --collect-all PyQt6 --hidden-import anthropic --hidden-import keyboard --hidden-import PIL --hidden-import PyQt6.QtWidgets --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui main.py
 )
 
 if errorlevel 1 (
