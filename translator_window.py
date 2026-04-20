@@ -19,6 +19,7 @@ class TranslatorWindow(QWidget):
     translate_requested = pyqtSignal()
     settings_requested = pyqtSignal()
     help_requested     = pyqtSignal()
+    quit_requested     = pyqtSignal()  # Request to quit the entire application
     target_language_changed = pyqtSignal(str)
     source_language_changed = pyqtSignal(str)
     color_filters_changed = pyqtSignal(list)  # Emits list of enabled color hex strings
@@ -83,7 +84,7 @@ class TranslatorWindow(QWidget):
                 QPushButton:hover { color: white; background: rgba(255,255,255,30); border-radius: 4px; }
             """)
         btn_min.clicked.connect(self.showMinimized)
-        btn_close.clicked.connect(self.hide)
+        btn_close.clicked.connect(self.quit_requested.emit)
 
         title_layout.addWidget(title_label)
         title_layout.addWidget(self._auto_dot)

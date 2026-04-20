@@ -97,9 +97,11 @@ class OverlayWindow(QWidget):
         if self._locked:
             self._lock_btn.setText("🔒")
             self._lock_btn.setToolTip("Locked - Click to unlock")
+            self._size_grip.setVisible(False)  # Hide resize grip when locked
         else:
             self._lock_btn.setText("🔓")
             self._lock_btn.setToolTip("Unlocked - Click to lock")
+            self._size_grip.setVisible(True)  # Show resize grip when unlocked
 
     def _apply_settings(self):
         """Apply position, size from settings"""

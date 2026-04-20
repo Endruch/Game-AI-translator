@@ -137,6 +137,7 @@ class App:
         self.translator_win.translate_requested.connect(self._do_translate)
         self.translator_win.settings_requested.connect(self._open_settings)
         self.translator_win.help_requested.connect(self._open_help)
+        self.translator_win.quit_requested.connect(self._quit)
         self.translator_win.target_language_changed.connect(self._on_target_language_changed)
         self.translator_win.source_language_changed.connect(self._on_source_language_changed)
         self.translator_win.color_filters_changed.connect(self._on_color_filters_changed)
