@@ -41,6 +41,4 @@ env/
 PROJECT_CONTEXT.txt
 *.log
 config_local.py
-build.bat
-install_and_build.bat
 *.spec
