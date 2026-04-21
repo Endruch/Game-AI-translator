@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QComboBox, QPushButton, QFrame, QSizeGrip, QCheckBox, QScrollArea, QWidget, QDialog
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint
+from PyQt6.QtGui import QFont, QMouseEvent
 import sys
 from pathlib import Path
 
@@ -175,6 +175,9 @@ class TranslatorWindow(DraggableWidget):
         self._color_checkboxes = {}
         self._color_picker = ColorPickerWidget()
         self._color_picker.color_picked.connect(self._on_color_picked)
+        self._resize_mode = None
+        self._resize_start_pos = None
+        self._resize_start_geo = None
         self._setup_window()
         self._build_ui()
         self._apply_settings()
@@ -422,9 +425,6 @@ class TranslatorWindow(DraggableWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(self._container)
 
-        self._grip = QSizeGrip(self)
-        self._grip.setFixedSize(16, 16)
-
     def _apply_settings(self):
         tw = self.settings.get("translator_window", {})
         self.setGeometry(
@@ -477,7 +477,6 @@ class TranslatorWindow(DraggableWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._container.setGeometry(0, 0, self.width(), self.height())
-        self._grip.move(self.width() - 16, self.height() - 16)
 
     def _set_placeholder(self):
         hotkey = self.settings.get("hotkey", "Shift+F9")
@@ -626,3 +625,73 @@ class TranslatorWindow(DraggableWidget):
             container.deleteLater()
             self._on_color_filter_changed()
             save_settings(self.settings)
+
+    def _get_resize_mode(self, pos: QPoint) -> str:
+        edge = 10
+        w, h = self.width(), self.height()
+        x, y = pos.x(), pos.y()
+
+        if x <= edge and y <= edge:
+            return "tl"
+        elif x >= w - edge and y <= edge:
+            return "tr"
+        elif x <= edge and y >= h - edge:
+            return "bl"
+        elif x >= w - edge and y >= h - edge:
+            return "br"
+        return None
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
+            self._resize_mode = self._get_resize_mode(pos)
+            if self._resize_mode:
+                self._resize_start_pos = event.globalPosition().toPoint()
+                self._resize_start_geo = self.geometry()
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if self._resize_mode and self._resize_start_pos:
+            delta = event.globalPosition().toPoint() - self._resize_start_pos
+            geo = self._resize_start_geo
+            new_geo = geo
+
+            if self._resize_mode == "br":
+                new_geo.setWidth(max(self.minimumWidth(), geo.width() + delta.x()))
+                new_geo.setHeight(max(self.minimumHeight(), geo.height() + delta.y()))
+            elif self._resize_mode == "bl":
+                new_w = max(self.minimumWidth(), geo.width() - delta.x())
+                new_geo.setLeft(geo.right() - new_w)
+                new_geo.setHeight(max(self.minimumHeight(), geo.height() + delta.y()))
+            elif self._resize_mode == "tr":
+                new_h = max(self.minimumHeight(), geo.height() - delta.y())
+                new_geo.setTop(geo.bottom() - new_h)
+                new_geo.setWidth(max(self.minimumWidth(), geo.width() + delta.x()))
+            elif self._resize_mode == "tl":
+                new_w = max(self.minimumWidth(), geo.width() - delta.x())
+                new_h = max(self.minimumHeight(), geo.height() - delta.y())
+                new_geo.setLeft(geo.right() - new_w)
+                new_geo.setTop(geo.bottom() - new_h)
+
+            self.setGeometry(new_geo)
+            event.accept()
+            return
+
+        pos = event.position().toPoint()
+        mode = self._get_resize_mode(pos)
+        if mode:
+            event.accept()
+            return
+
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        if self._resize_mode:
+            self._resize_mode = None
+            self._resize_start_pos = None
+            self._resize_start_geo = None
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
