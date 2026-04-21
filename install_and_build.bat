@@ -33,10 +33,10 @@ for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d"
 del /s /q *.pyc 2>nul
 
 if exist "assets\icon.ico" (
-    pyinstaller --onefile --windowed --name "GameTranslator" --icon=assets\icon.ico --add-data "help_text.txt;." --collect-all winrt --collect-all PyQt6 --hidden-import anthropic --hidden-import keyboard --hidden-import PIL --hidden-import PyQt6.QtWidgets --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui main.py
+    pyinstaller --onefile --windowed --name "GameTranslator" --icon=assets\icon.ico --add-data "help_text.txt;." --collect-all winrt --collect-all PyQt6 --hidden-import anthropic --hidden-import keyboard --hidden-import PIL --hidden-import PyQt6.QtWidgets --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui --hidden-import winrt.windows.media.ocr --hidden-import winrt.windows.graphics.imaging --hidden-import winrt.windows.storage.streams main.py
 ) else (
     echo [WARNING] Icon not found, building without icon
-    pyinstaller --onefile --windowed --name "GameTranslator" --add-data "help_text.txt;." --collect-all winrt --collect-all PyQt6 --hidden-import anthropic --hidden-import keyboard --hidden-import PIL --hidden-import PyQt6.QtWidgets --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui main.py
+    pyinstaller --onefile --windowed --name "GameTranslator" --add-data "help_text.txt;." --collect-all winrt --collect-all PyQt6 --hidden-import anthropic --hidden-import keyboard --hidden-import PIL --hidden-import PyQt6.QtWidgets --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui --hidden-import winrt.windows.media.ocr --hidden-import winrt.windows.graphics.imaging --hidden-import winrt.windows.storage.streams main.py
 )
 
 if errorlevel 1 (

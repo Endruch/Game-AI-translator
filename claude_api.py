@@ -35,7 +35,6 @@ def translate_text(text: str, source_language: str, target_language: str,
                 message = client.messages.create(
                     model=model,
                     max_tokens=1000,
-                    timeout=30,
                     messages=[{
                         "role": "user",
                         "content": prompt

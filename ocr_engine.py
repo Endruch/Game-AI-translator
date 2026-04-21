@@ -66,7 +66,11 @@ async def _capture_and_recognize(x: int, y: int, width: int, height: int,
         bitmap = await decoder.get_software_bitmap_async()
 
         results = []
-        available_languages = win_ocr.OcrEngine.get_available_recognizer_languages()
+
+        try:
+            available_languages = win_ocr.OcrEngine.get_available_recognizer_languages()
+        except Exception:
+            return ""
 
         if not available_languages:
             return ""

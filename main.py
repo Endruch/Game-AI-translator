@@ -213,10 +213,10 @@ class App:
             thread.deleteLater()
             worker.deleteLater()
 
-            self._release_busy_flag()
-
         except Exception:
             pass
+        finally:
+            self._release_busy_flag()
 
     def _release_busy_flag(self):
         with self._busy_lock:

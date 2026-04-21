@@ -541,7 +541,10 @@ class SettingsWindow(QDialog):
         folder = QFileDialog.getExistingDirectory(self, "Choose Log Folder")
         if folder:
             self.history_folder_input.setText(folder)
-            self._update_folder_hint()
+            temp_settings = self.settings.copy()
+            temp_settings["history"]["folder"] = folder
+            folder_to_show = get_history_folder(temp_settings)
+            self._folder_hint.setText(f"Current: {folder_to_show}")
 
     def _update_folder_hint(self):
         folder = get_history_folder(self.settings)
