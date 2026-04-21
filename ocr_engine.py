@@ -1,12 +1,44 @@
 import asyncio
 import io
 import difflib
+import sys
+from pathlib import Path
 from threading import Lock
 from PIL import ImageGrab
+import pytesseract
 import winrt.windows.media.ocr as win_ocr
 import winrt.windows.graphics.imaging as win_imaging
 import winrt.windows.storage.streams as win_streams
+from winrt.windows.globalization import Language
 from color_detector import filter_text_by_color
+
+if getattr(sys, 'frozen', False):
+    base_path = Path(sys.executable).parent
+    tesseract_path = base_path / "tesseract" / "tesseract.exe"
+    if tesseract_path.exists():
+        pytesseract.pytesseract.tesseract_cmd = str(tesseract_path)
+else:
+    tesseract_default = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if Path(tesseract_default).exists():
+        pytesseract.pytesseract.tesseract_cmd = tesseract_default
+
+LANGUAGE_MAP = {
+    "English": "en",
+    "Russian": "ru",
+    "German": "de",
+    "French": "fr",
+    "Spanish": "es",
+    "Italian": "it",
+    "Portuguese": "pt",
+    "Chinese (Simplified)": "zh-Hans",
+    "Chinese (Traditional)": "zh-Hant",
+    "Japanese": "ja",
+    "Korean": "ko",
+    "Arabic": "ar",
+    "Turkish": "tr",
+    "Polish": "pl",
+    "Ukrainian": "uk"
+}
 
 
 class OCRCache:
@@ -40,7 +72,8 @@ _cache = OCRCache()
 
 
 async def _capture_and_recognize(x: int, y: int, width: int, height: int,
-                                  color_filters: list = None, use_color_filters: bool = False) -> str:
+                                  color_filters: list = None, use_color_filters: bool = False,
+                                  source_language: str = "Auto-detect") -> str:
     try:
         screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
 
@@ -48,7 +81,15 @@ async def _capture_and_recognize(x: int, y: int, width: int, height: int,
             return ""
 
         if use_color_filters and color_filters:
-            screenshot = filter_text_by_color(screenshot, color_filters, tolerance=40)
+            screenshot = filter_text_by_color(screenshot, color_filters, tolerance=60)
+
+        try:
+            text = pytesseract.image_to_string(screenshot, lang='eng+rus')
+            text = text.strip()
+            if text:
+                return text
+        except Exception:
+            pass
 
         img_bytes = io.BytesIO()
         screenshot.save(img_bytes, format="BMP")
@@ -75,6 +116,13 @@ async def _capture_and_recognize(x: int, y: int, width: int, height: int,
         if not available_languages:
             return ""
 
+        engine = win_ocr.OcrEngine.try_create_from_user_profile_languages()
+        if engine:
+            result = await engine.recognize_async(bitmap)
+            text = result.text.strip()
+            if text:
+                return text
+
         for lang in available_languages:
             try:
                 engine = win_ocr.OcrEngine.try_create_from_language(lang)
@@ -97,16 +145,18 @@ async def _capture_and_recognize(x: int, y: int, width: int, height: int,
 
 
 def capture_and_recognize_sync(x: int, y: int, width: int, height: int,
-                                color_filters: list = None, use_color_filters: bool = False) -> str:
+                                color_filters: list = None, use_color_filters: bool = False,
+                                source_language: str = "Auto-detect") -> str:
     try:
-        return asyncio.run(_capture_and_recognize(x, y, width, height, color_filters, use_color_filters))
+        return asyncio.run(_capture_and_recognize(x, y, width, height, color_filters, use_color_filters, source_language))
     except Exception:
         return ""
 
 
 def capture_if_changed(x: int, y: int, width: int, height: int,
-                       color_filters: list = None, use_color_filters: bool = False, similarity_threshold: float = 0.90) -> tuple[bool, str]:
-    text = capture_and_recognize_sync(x, y, width, height, color_filters, use_color_filters)
+                       color_filters: list = None, use_color_filters: bool = False,
+                       source_language: str = "Auto-detect", similarity_threshold: float = 0.90) -> tuple[bool, str]:
+    text = capture_and_recognize_sync(x, y, width, height, color_filters, use_color_filters, source_language)
 
     if not text:
         return False, ""

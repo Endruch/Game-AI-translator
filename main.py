@@ -41,7 +41,8 @@ class TranslationWorker(QObject):
                 changed, text = capture_if_changed(
                     self.rect.x(), self.rect.y(),
                     self.rect.width(), self.rect.height(),
-                    self.color_filters, self.use_color_filters
+                    self.color_filters, self.use_color_filters,
+                    self.source_lang
                 )
                 if not changed:
                     self.no_changes.emit()
@@ -50,7 +51,8 @@ class TranslationWorker(QObject):
                 text = capture_and_recognize_sync(
                     self.rect.x(), self.rect.y(),
                     self.rect.width(), self.rect.height(),
-                    self.color_filters, self.use_color_filters
+                    self.color_filters, self.use_color_filters,
+                    self.source_lang
                 )
                 if not text:
                     self.error.emit("No text recognized.\nMake sure the frame covers the chat text.")

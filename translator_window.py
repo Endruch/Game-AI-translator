@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QTextEdit, QComboBox, QPushButton, QFrame, QSizeGrip, QCheckBox, QScrollArea, QWidget, QDialog
-from PyQt6.QtCore import Qt, pyqtSignal, QPoint
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRect
 from PyQt6.QtGui import QFont, QMouseEvent
 import sys
 from pathlib import Path
@@ -7,6 +7,8 @@ from pathlib import Path
 from config import SUPPORTED_LANGUAGES, SOURCE_LANGUAGES, save_settings
 from ui_base import DraggableWidget
 from color_picker import ColorPickerWidget
+
+HELP_TEXT = (Path(__file__).parent / "help_text.txt").read_text(encoding="utf-8")
 
 
 class HelpWindow(QDialog):
@@ -146,20 +148,7 @@ class HelpWindow(QDialog):
         layout.addWidget(content)
 
     def _load_help_text(self):
-        try:
-            if getattr(sys, 'frozen', False):
-                base_path = Path(sys.executable).parent
-            else:
-                base_path = Path(__file__).parent
-
-            help_file = base_path / "help_text.txt"
-
-            if help_file.exists():
-                return help_file.read_text(encoding="utf-8")
-            else:
-                return "Help file not found.\n\nPlease make sure help_text.txt exists in the application directory."
-        except Exception:
-            return "Error loading help file."
+        return HELP_TEXT
 
 
 class TranslatorWindow(DraggableWidget):
@@ -656,7 +645,7 @@ class TranslatorWindow(DraggableWidget):
         if self._resize_mode and self._resize_start_pos:
             delta = event.globalPosition().toPoint() - self._resize_start_pos
             geo = self._resize_start_geo
-            new_geo = geo
+            new_geo = QRect(geo)
 
             if self._resize_mode == "br":
                 new_geo.setWidth(max(self.minimumWidth(), geo.width() + delta.x()))

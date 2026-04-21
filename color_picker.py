@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QLabel
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtWidgets import QWidget, QLabel, QApplication
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QEvent
 from PyQt6.QtGui import QCursor, QColor
 from PIL import ImageGrab
 
@@ -48,6 +48,7 @@ class ColorPickerWidget(QWidget):
 
     def start_picking(self):
         self._is_picking = True
+        QApplication.instance().installEventFilter(self)
         self.setCursor(Qt.CursorShape.CrossCursor)
         self._timer.start()
         self._label.setText("Click color")
@@ -82,24 +83,33 @@ class ColorPickerWidget(QWidget):
 
         self.move(pos.x() + 20, pos.y() + 20)
 
+    def eventFilter(self, obj, event):
+        if self._is_picking and event.type() == QEvent.Type.MouseButtonPress:
+            if event.button() == Qt.MouseButton.LeftButton:
+                self._stop_picking()
+                self.color_picked.emit(self._current_color)
+                return True
+            elif event.button() == Qt.MouseButton.RightButton:
+                self._stop_picking()
+                return True
+        return super().eventFilter(obj, event)
+
+    def _stop_picking(self):
+        self._is_picking = False
+        self._timer.stop()
+        QApplication.instance().removeEventFilter(self)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.hide()
+
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self._is_picking:
-            self._is_picking = False
-            self._timer.stop()
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-            self.color_picked.emit(self._current_color)
-            self.hide()
         super().mousePressEvent(event)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
-            self._is_picking = False
-            self._timer.stop()
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-            self.hide()
+            self._stop_picking()
         super().keyPressEvent(event)
 
     def closeEvent(self, event):
-        self._is_picking = False
-        self._timer.stop()
+        if self._is_picking:
+            self._stop_picking()
         super().closeEvent(event)
