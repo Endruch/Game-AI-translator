@@ -168,7 +168,6 @@ class TranslatorWindow(DraggableWidget):
     quit_requested     = pyqtSignal()
     target_language_changed = pyqtSignal(str)
     source_language_changed = pyqtSignal(str)
-    color_filters_changed = pyqtSignal(list)
 
     def __init__(self, settings: dict):
         super().__init__()
@@ -603,9 +602,6 @@ class TranslatorWindow(DraggableWidget):
         return enabled
 
     def _on_color_filter_changed(self):
-        enabled = self.get_enabled_color_filters()
-        self.color_filters_changed.emit(enabled)
-
         color_filters = {}
         for hex_color, checkbox in self._color_checkboxes.items():
             color_filters[hex_color] = checkbox.isChecked()
