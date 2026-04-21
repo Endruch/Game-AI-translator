@@ -32,6 +32,10 @@ if exist __pycache__ rmdir /s /q __pycache__
 for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d"
 del /s /q *.pyc 2>nul
 
+echo Clearing application cache and settings...
+if exist "%APPDATA%\GameTranslator" rmdir /s /q "%APPDATA%\GameTranslator"
+echo Cache cleared.
+
 if exist "assets\icon.ico" (
     pyinstaller --onefile --windowed --name "GameTranslator" --icon=assets\icon.ico --add-data "help_text.txt;." --collect-all winrt --collect-all PyQt6 --hidden-import anthropic --hidden-import keyboard --hidden-import PIL --hidden-import PyQt6.QtWidgets --hidden-import PyQt6.QtCore --hidden-import PyQt6.QtGui --hidden-import winrt.windows.media.ocr --hidden-import winrt.windows.graphics.imaging --hidden-import winrt.windows.storage.streams main.py
 ) else (
