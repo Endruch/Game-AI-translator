@@ -25,13 +25,14 @@ class TranslationWorker(QObject):
     no_changes = pyqtSignal()
 
     def __init__(self, rect: QRect, source_lang: str, target_lang: str,
-                 api_key: str, color_filters: list, check_changes: bool = False):
+                 api_key: str, color_filters: list, use_color_filters: bool, check_changes: bool = False):
         super().__init__()
         self.rect = rect
         self.source_lang = source_lang
         self.target_lang = target_lang
         self.api_key = api_key
         self.color_filters = color_filters
+        self.use_color_filters = use_color_filters
         self.check_changes = check_changes
 
     def run(self):
@@ -40,7 +41,7 @@ class TranslationWorker(QObject):
                 changed, text = capture_if_changed(
                     self.rect.x(), self.rect.y(),
                     self.rect.width(), self.rect.height(),
-                    self.color_filters
+                    self.color_filters, self.use_color_filters
                 )
                 if not changed:
                     self.no_changes.emit()
@@ -49,7 +50,7 @@ class TranslationWorker(QObject):
                 text = capture_and_recognize_sync(
                     self.rect.x(), self.rect.y(),
                     self.rect.width(), self.rect.height(),
-                    self.color_filters
+                    self.color_filters, self.use_color_filters
                 )
                 if not text:
                     self.error.emit("No text recognized.\nMake sure the frame covers the chat text.")
@@ -176,8 +177,9 @@ class App:
         source_lang = self.translator_win.get_selected_source_language()
         target_lang = self.translator_win.get_selected_target_language()
         color_filters = self.translator_win.get_enabled_color_filters()
+        use_color_filters = self.settings.get("use_color_filters", False)
 
-        worker = TranslationWorker(rect, source_lang, target_lang, api_key, color_filters, check_changes)
+        worker = TranslationWorker(rect, source_lang, target_lang, api_key, color_filters, use_color_filters, check_changes)
         thread = QThread()
         worker.moveToThread(thread)
 

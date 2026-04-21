@@ -8,16 +8,8 @@ DEFAULT_SETTINGS = {
     "api_key": "",
     "source_language": "Auto-detect",
     "target_language": "Russian",
-    "color_filters": {
-        "#FFFFFF": True,
-        "#FFD700": True,
-        "#00FF00": True,
-        "#FF8C00": True,
-        "#A0A0A0": True,
-        "#00BFFF": True,
-        "#00E5FF": True,
-        "#4169FF": True,
-    },
+    "use_color_filters": False,
+    "color_filters": {},
     "hotkey": "shift+F9",
     "hotkey_hide_overlay": "shift+F8",
     "overlay": {

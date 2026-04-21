@@ -280,6 +280,21 @@ class SettingsWindow(QDialog):
         layout.setSpacing(12)
         layout.setContentsMargins(12, 16, 12, 12)
 
+        layout.addWidget(self._section("Color Filters"))
+
+        self.use_color_filters_check = QCheckBox("Enable color filtering")
+        layout.addWidget(self.use_color_filters_check)
+
+        info = QLabel(
+            "When enabled, only text of selected colors will be detected.\n"
+            "When disabled, text of any color will be detected."
+        )
+        info.setWordWrap(True)
+        info.setStyleSheet("color: #667799; font-size: 10px;")
+        layout.addWidget(info)
+
+        layout.addWidget(self._sep())
+
         layout.addWidget(self._section("Capture Frame Appearance"))
 
         color_row = QHBoxLayout()
@@ -428,6 +443,8 @@ class SettingsWindow(QDialog):
         self.hotkey_input.setText(s.get("hotkey", "shift+F9"))
         self.hotkey_hide_input.setText(s.get("hotkey_hide_overlay", "shift+F8"))
 
+        self.use_color_filters_check.setChecked(s.get("use_color_filters", False))
+
         ov = s.get("overlay", {})
         self.border_width_spin.setValue(ov.get("border_width", 3))
 
@@ -455,6 +472,8 @@ class SettingsWindow(QDialog):
         s["api_key"] = self.api_key_input.text().strip()
         s["hotkey"] = self.hotkey_input.text().strip() or "shift+F9"
         s["hotkey_hide_overlay"] = self.hotkey_hide_input.text().strip() or "shift+F8"
+
+        s["use_color_filters"] = self.use_color_filters_check.isChecked()
 
         s["overlay"]["border_color"] = self._border_color
         s["overlay"]["border_width"] = self.border_width_spin.value()

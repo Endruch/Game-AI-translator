@@ -40,14 +40,14 @@ _cache = OCRCache()
 
 
 async def _capture_and_recognize(x: int, y: int, width: int, height: int,
-                                  color_filters: list = None) -> str:
+                                  color_filters: list = None, use_color_filters: bool = False) -> str:
     try:
         screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
 
         if screenshot is None:
             return ""
 
-        if color_filters:
+        if use_color_filters and color_filters:
             screenshot = filter_text_by_color(screenshot, color_filters, tolerance=40)
 
         img_bytes = io.BytesIO()
@@ -93,16 +93,16 @@ async def _capture_and_recognize(x: int, y: int, width: int, height: int,
 
 
 def capture_and_recognize_sync(x: int, y: int, width: int, height: int,
-                                color_filters: list = None) -> str:
+                                color_filters: list = None, use_color_filters: bool = False) -> str:
     try:
-        return asyncio.run(_capture_and_recognize(x, y, width, height, color_filters))
+        return asyncio.run(_capture_and_recognize(x, y, width, height, color_filters, use_color_filters))
     except Exception:
         return ""
 
 
 def capture_if_changed(x: int, y: int, width: int, height: int,
-                       color_filters: list = None, similarity_threshold: float = 0.90) -> tuple[bool, str]:
-    text = capture_and_recognize_sync(x, y, width, height, color_filters)
+                       color_filters: list = None, use_color_filters: bool = False, similarity_threshold: float = 0.90) -> tuple[bool, str]:
+    text = capture_and_recognize_sync(x, y, width, height, color_filters, use_color_filters)
 
     if not text:
         return False, ""
