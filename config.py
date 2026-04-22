@@ -11,7 +11,6 @@ DEFAULT_SETTINGS = {
         "Claude": "",
         "ChatGPT": "",
         "Grok": "",
-        "DeepSeek": "",
         "Gemini": ""
     },
     "source_language": "Auto-detect",

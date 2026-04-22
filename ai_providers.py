@@ -1,7 +1,6 @@
 import io
 import base64
 import time
-from PIL import Image
 
 AI_PROVIDERS = {
     "Claude": {
@@ -208,6 +207,7 @@ def recognize_and_translate_gemini(screenshot_b64: str, source_language: str, ta
     }
 
     for retry in range(max_retries):
+        response = None
         try:
             response = requests.post(api_url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
@@ -216,12 +216,13 @@ def recognize_and_translate_gemini(screenshot_b64: str, source_language: str, ta
             return translation, translation
         except requests.exceptions.HTTPError as e:
             error_msg = str(e)
-            try:
-                error_data = response.json()
-                if "error" in error_data:
-                    error_msg = error_data["error"].get("message", error_msg)
-            except:
-                pass
+            if response is not None:
+                try:
+                    error_data = response.json()
+                    if "error" in error_data:
+                        error_msg = error_data["error"].get("message", error_msg)
+                except:
+                    pass
             if retry < max_retries - 1:
                 time.sleep(1)
                 continue
