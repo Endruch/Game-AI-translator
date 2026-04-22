@@ -8,7 +8,11 @@ from config import SUPPORTED_LANGUAGES, SOURCE_LANGUAGES, save_settings
 from ui_base import DraggableWidget
 from color_picker import ColorPickerWidget
 
-HELP_TEXT = (Path(__file__).parent / "help_text.txt").read_text(encoding="utf-8")
+try:
+    _help_file = Path(__file__).parent / "help_text.txt"
+    HELP_TEXT = _help_file.read_text(encoding="utf-8")
+except:
+    HELP_TEXT = "Help file not available."
 
 
 class HelpWindow(QDialog):

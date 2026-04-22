@@ -9,8 +9,8 @@ from config import load_settings, save_settings
 from overlay import OverlayWindow
 from translator_window import TranslatorWindow
 from settings import SettingsWindow
-from ocr_engine import capture_and_recognize_sync, capture_if_changed, reset_last_text
-from claude_api import translate_text
+from ocr_engine import capture_screenshot_base64, check_screenshot_changed, update_cache, reset_last_text
+from claude_api import recognize_and_translate
 from history_logger import log_translation
 
 try:
@@ -37,33 +37,33 @@ class TranslationWorker(QObject):
 
     def run(self):
         try:
+            screenshot_b64 = capture_screenshot_base64(
+                self.rect.x(), self.rect.y(),
+                self.rect.width(), self.rect.height(),
+                self.color_filters, self.use_color_filters
+            )
+
+            if not screenshot_b64:
+                self.error.emit("Failed to capture screenshot.")
+                return
+
             if self.check_changes:
-                changed, text = capture_if_changed(
-                    self.rect.x(), self.rect.y(),
-                    self.rect.width(), self.rect.height(),
-                    self.color_filters, self.use_color_filters,
-                    self.source_lang
-                )
-                if not changed:
+                if not check_screenshot_changed(screenshot_b64):
                     self.no_changes.emit()
                     return
+                update_cache(screenshot_b64)
+
+            original_text, translation = recognize_and_translate(
+                screenshot_b64, self.source_lang, self.target_lang, self.api_key
+            )
+
+            if translation.startswith("[Error]"):
+                self.error.emit(translation)
             else:
-                text = capture_and_recognize_sync(
-                    self.rect.x(), self.rect.y(),
-                    self.rect.width(), self.rect.height(),
-                    self.color_filters, self.use_color_filters,
-                    self.source_lang
-                )
-                if not text:
-                    self.error.emit("No text recognized.\nMake sure the frame covers the chat text.")
+                if not translation:
+                    self.error.emit("No text recognized.\nMake sure the frame covers text.")
                     return
-
-            result = translate_text(text, self.source_lang, self.target_lang, self.api_key)
-
-            if result.startswith("[Error]"):
-                self.error.emit(result)
-            else:
-                self.finished.emit(text, result)
+                self.finished.emit(translation, translation)
 
         except Exception as e:
             self.error.emit(f"[Error] Translation failed: {str(e)}")
