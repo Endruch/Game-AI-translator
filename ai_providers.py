@@ -231,23 +231,40 @@ def recognize_and_translate_deepseek(screenshot_b64: str, source_language: str, 
 
 def recognize_and_translate_gemini(screenshot_b64: str, source_language: str, target_language: str,
                                     api_key: str, model: str, max_retries: int = 3) -> tuple[str, str]:
-    import google.generativeai as genai
+    import requests
 
     if source_language == "Auto-detect":
         prompt = f"Extract all text from this image and translate it to {target_language}. Keep player names unchanged. Return ONLY the translated text, nothing else."
     else:
         prompt = f"Extract all text from this image (it's in {source_language}) and translate it to {target_language}. Keep player names unchanged. Return ONLY the translated text, nothing else."
 
-    genai.configure(api_key=api_key)
+    if "2.0" in model or "exp" in model:
+        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    else:
+        api_url = f"https://generativelanguage.googleapis.com/v1/models/{model}:generateContent"
 
-    img_bytes = base64.b64decode(screenshot_b64)
-    img = Image.open(io.BytesIO(img_bytes))
+    headers = {"Content-Type": "application/json"}
+
+    payload = {
+        "contents": [{
+            "parts": [
+                {"text": prompt},
+                {
+                    "inline_data": {
+                        "mime_type": "image/png",
+                        "data": screenshot_b64
+                    }
+                }
+            ]
+        }]
+    }
 
     for retry in range(max_retries):
         try:
-            model_obj = genai.GenerativeModel(model)
-            response = model_obj.generate_content([prompt, img])
-            translation = response.text.strip()
+            response = requests.post(f"{api_url}?key={api_key}", headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            result = response.json()
+            translation = result["candidates"][0]["content"]["parts"][0]["text"].strip()
             return translation, translation
         except Exception as e:
             if retry < max_retries - 1:

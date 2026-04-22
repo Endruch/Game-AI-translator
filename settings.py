@@ -3,7 +3,8 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QSpinBox, QFrame,
     QColorDialog, QMessageBox, QCheckBox, QTabWidget,
-    QWidget, QFileDialog, QDoubleSpinBox, QRadioButton, QButtonGroup
+    QWidget, QFileDialog, QDoubleSpinBox, QRadioButton, QButtonGroup,
+    QScrollArea
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QKeyEvent, QDesktopServices
@@ -104,7 +105,7 @@ class SettingsWindow(QDialog):
     def _setup_window(self):
         self.setWindowTitle("Settings — Game Translator")
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
-        self.setFixedWidth(460)
+        self.setFixedSize(460, 600)
         self.setStyleSheet("""
             QDialog { background-color: #12121c; color: white; border: 2px solid rgba(100,100,180,150); border-radius: 8px; }
             QTabWidget::pane {
@@ -145,6 +146,26 @@ class SettingsWindow(QDialog):
             QCheckBox::indicator:checked {
                 background: #5555cc;
                 border-color: #8888ff;
+            }
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+            QScrollBar:vertical {
+                background: rgba(30,30,50,100);
+                width: 10px;
+                border-radius: 5px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(100,100,180,150);
+                border-radius: 5px;
+                min-height: 30px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: rgba(120,120,200,180);
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
             }
         """)
 
@@ -197,9 +218,6 @@ class SettingsWindow(QDialog):
         tabs = QTabWidget()
         tabs.addTab(self._tab_ai(), "AI Settings")
         tabs.addTab(self._tab_general(), "General")
-        tabs.addTab(self._tab_colors(), "Colors & Filters")
-        tabs.addTab(self._tab_auto(), "Auto-Translate")
-        tabs.addTab(self._tab_other(), "Other")
         content_layout.addWidget(tabs)
 
         # Buttons
@@ -220,29 +238,42 @@ class SettingsWindow(QDialog):
         layout.addWidget(content)
 
     def _tab_ai(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(12)
         layout.setContentsMargins(12, 16, 12, 12)
 
-        layout.addWidget(self._section("AI Provider"))
+        layout.addWidget(self._section("Select AI Provider"))
 
         self.ai_radio_buttons = {}
         self.ai_button_group = QButtonGroup()
 
         for provider_id, provider_info in AI_PROVIDERS.items():
             radio = QRadioButton(provider_info["name"])
+            radio.setStyleSheet("color: #ccccee; font-size: 12px;")
             self.ai_radio_buttons[provider_id] = radio
             self.ai_button_group.addButton(radio)
+            radio.toggled.connect(self._update_api_visibility)
             layout.addWidget(radio)
 
         layout.addWidget(self._sep())
 
-        layout.addWidget(self._section("API Keys"))
-
+        self.api_key_containers = {}
         self.api_key_inputs = {}
+
         for provider_id, provider_info in AI_PROVIDERS.items():
-            label = QLabel(f"{provider_info['name']}:")
+            container = QWidget()
+            container_layout = QVBoxLayout(container)
+            container_layout.setContentsMargins(0, 0, 0, 0)
+            container_layout.setSpacing(8)
+
+            label = QLabel(f"{provider_info['name']} API Key:")
+            label.setStyleSheet("color: #ccccee; font-size: 12px;")
+
             self.api_key_inputs[provider_id] = QLineEdit()
             self.api_key_inputs[provider_id].setPlaceholderText("Enter API key...")
             self.api_key_inputs[provider_id].setEchoMode(QLineEdit.EchoMode.Password)
@@ -259,19 +290,35 @@ class SettingsWindow(QDialog):
             link_label = QLabel(f'<a href="{provider_info["url"]}" style="color: #6688ff;">Get API Key</a>')
             link_label.setOpenExternalLinks(False)
             link_label.linkActivated.connect(lambda url: QDesktopServices.openUrl(QUrl(url)))
-            link_label.setStyleSheet("font-size: 10px;")
+            link_label.setStyleSheet("font-size: 10px; color: #6688ff;")
 
-            layout.addWidget(label)
+            container_layout.addWidget(label)
             row = QHBoxLayout()
             row.addWidget(self.api_key_inputs[provider_id])
             row.addWidget(show_btn)
-            layout.addLayout(row)
-            layout.addWidget(link_label)
+            container_layout.addLayout(row)
+            container_layout.addWidget(link_label)
+
+            self.api_key_containers[provider_id] = container
+            layout.addWidget(container)
+            container.hide()
 
         layout.addStretch()
-        return w
+        scroll.setWidget(w)
+        return scroll
+
+    def _update_api_visibility(self):
+        for provider_id, radio in self.ai_radio_buttons.items():
+            if radio.isChecked():
+                self.api_key_containers[provider_id].show()
+            else:
+                self.api_key_containers[provider_id].hide()
 
     def _tab_general(self) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(12)
@@ -304,14 +351,7 @@ class SettingsWindow(QDialog):
         self.autostart_check = QCheckBox("Launch with Windows")
         layout.addWidget(self.autostart_check)
 
-        layout.addStretch()
-        return w
-
-    def _tab_colors(self) -> QWidget:
-        w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setSpacing(12)
-        layout.setContentsMargins(12, 16, 12, 12)
+        layout.addWidget(self._sep())
 
         layout.addWidget(self._section("Color Filters"))
 
@@ -350,29 +390,20 @@ class SettingsWindow(QDialog):
         width_row.addStretch()
         layout.addLayout(width_row)
 
-        layout.addStretch()
-        return w
-
-    def _tab_auto(self) -> QWidget:
-        w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setSpacing(12)
-        layout.setContentsMargins(12, 16, 12, 12)
+        layout.addWidget(self._sep())
 
         layout.addWidget(self._section("Automatic Translation"))
 
         self.auto_enabled_check = QCheckBox("Enable auto-translate")
         layout.addWidget(self.auto_enabled_check)
 
-        info = QLabel(
+        info2 = QLabel(
             "When enabled, the app checks the capture area every N seconds.\n"
             "Translation only runs if the text has changed since last check."
         )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #667799; font-size: 10px;")
-        layout.addWidget(info)
-
-        layout.addWidget(self._sep())
+        info2.setWordWrap(True)
+        info2.setStyleSheet("color: #667799; font-size: 10px;")
+        layout.addWidget(info2)
 
         interval_row = QHBoxLayout()
         interval_row.addWidget(QLabel("Check interval (seconds):"))
@@ -384,14 +415,7 @@ class SettingsWindow(QDialog):
         interval_row.addStretch()
         layout.addLayout(interval_row)
 
-        layout.addStretch()
-        return w
-
-    def _tab_other(self) -> QWidget:
-        w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setSpacing(12)
-        layout.setContentsMargins(12, 16, 12, 12)
+        layout.addWidget(self._sep())
 
         layout.addWidget(self._section("Translator Window"))
 
@@ -425,13 +449,13 @@ class SettingsWindow(QDialog):
         self.history_enabled_check = QCheckBox("Save translation history to file")
         layout.addWidget(self.history_enabled_check)
 
-        info = QLabel(
+        info3 = QLabel(
             "Each translation is appended to a daily log file:\n"
             "translation_log_YYYY-MM-DD.txt"
         )
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #667799; font-size: 10px;")
-        layout.addWidget(info)
+        info3.setWordWrap(True)
+        info3.setStyleSheet("color: #667799; font-size: 10px;")
+        layout.addWidget(info3)
 
         self.history_folder_input = QLineEdit()
         self.history_folder_input.setPlaceholderText("Default: Documents\\GameTranslator\\")
@@ -458,7 +482,9 @@ class SettingsWindow(QDialog):
         layout.addWidget(open_btn)
 
         layout.addStretch()
-        return w
+        scroll.setWidget(w)
+        return scroll
+
 
     def _load_values(self):
         s = self.settings
@@ -470,6 +496,8 @@ class SettingsWindow(QDialog):
         api_keys = s.get("api_keys", {})
         for provider_id, key_input in self.api_key_inputs.items():
             key_input.setText(api_keys.get(provider_id, ""))
+
+        self._update_api_visibility()
 
         self.hotkey_input.setText(s.get("hotkey", "shift+F9"))
         self.hotkey_hide_input.setText(s.get("hotkey_hide_overlay", "shift+F8"))
