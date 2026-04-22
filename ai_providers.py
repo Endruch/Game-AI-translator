@@ -19,9 +19,7 @@ AI_PROVIDERS = {
         "url": "https://platform.openai.com/api-keys",
         "models": [
             "gpt-4o",
-            "gpt-4o-mini",
-            "gpt-4-turbo",
-            "gpt-4"
+            "gpt-4o-mini"
         ]
     },
     "Grok": {
@@ -30,14 +28,6 @@ AI_PROVIDERS = {
         "models": [
             "grok-2-vision-1212",
             "grok-vision-beta"
-        ]
-    },
-    "DeepSeek": {
-        "name": "DeepSeek",
-        "url": "https://platform.deepseek.com/api_keys",
-        "models": [
-            "deepseek-chat",
-            "deepseek-reasoner"
         ]
     },
     "Gemini": {
@@ -188,51 +178,6 @@ def recognize_and_translate_grok(screenshot_b64: str, source_language: str, targ
     return "", "[Error] Failed after retries"
 
 
-def recognize_and_translate_deepseek(screenshot_b64: str, source_language: str, target_language: str,
-                                      api_key: str, model: str, max_retries: int = 3) -> tuple[str, str]:
-    import openai
-
-    if source_language == "Auto-detect":
-        prompt = f"Extract all text from this image and translate it to {target_language}. Keep player names unchanged. Return ONLY the translated text, nothing else."
-    else:
-        prompt = f"Extract all text from this image (it's in {source_language}) and translate it to {target_language}. Keep player names unchanged. Return ONLY the translated text, nothing else."
-
-    client = openai.OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
-
-    for retry in range(max_retries):
-        try:
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{screenshot_b64}"
-                                }
-                            },
-                            {
-                                "type": "text",
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ],
-                max_tokens=1000
-            )
-            translation = response.choices[0].message.content.strip()
-            return translation, translation
-        except Exception as e:
-            if retry < max_retries - 1:
-                time.sleep(1)
-                continue
-            return "", f"[Error] {str(e)}"
-
-    return "", "[Error] Failed after retries"
-
-
 def recognize_and_translate_gemini(screenshot_b64: str, source_language: str, target_language: str,
                                     api_key: str, model: str, max_retries: int = 3) -> tuple[str, str]:
     import requests
@@ -242,7 +187,7 @@ def recognize_and_translate_gemini(screenshot_b64: str, source_language: str, ta
     else:
         prompt = f"Extract all text from this image (it's in {source_language}) and translate it to {target_language}. Keep player names unchanged. Return ONLY the translated text, nothing else."
 
-    api_url = f"https://generativelanguage.googleapis.com/v1/models/{model}:generateContent?key={api_key}"
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 
     headers = {"Content-Type": "application/json"}
 
@@ -303,8 +248,6 @@ def recognize_and_translate(screenshot_b64: str, source_language: str, target_la
             return recognize_and_translate_chatgpt(screenshot_b64, source_language, target_language, api_key, model)
         elif provider == "Grok":
             return recognize_and_translate_grok(screenshot_b64, source_language, target_language, api_key, model)
-        elif provider == "DeepSeek":
-            return recognize_and_translate_deepseek(screenshot_b64, source_language, target_language, api_key, model)
         elif provider == "Gemini":
             return recognize_and_translate_gemini(screenshot_b64, source_language, target_language, api_key, model)
         else:
