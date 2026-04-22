@@ -8,10 +8,10 @@ AI_PROVIDERS = {
         "name": "Claude (Anthropic)",
         "url": "https://console.anthropic.com/settings/keys",
         "models": [
-            "claude-sonnet-4-20250514",
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229"
+            "claude-sonnet-4-6",
+            "claude-opus-4-6",
+            "claude-haiku-4-5-20251001",
+            "claude-sonnet-4-5-20250929"
         ]
     },
     "ChatGPT": {
@@ -19,25 +19,27 @@ AI_PROVIDERS = {
         "url": "https://platform.openai.com/api-keys",
         "models": [
             "gpt-4o",
-            "gpt-4o-mini"
+            "gpt-4o-mini",
+            "gpt-4.1",
+            "gpt-4.1-mini"
         ]
     },
     "Grok": {
         "name": "Grok (xAI)",
         "url": "https://console.x.ai",
         "models": [
-            "grok-2-vision-1212",
-            "grok-vision-beta"
+            "grok-2-vision-latest",
+            "grok-2-vision-1212"
         ]
     },
     "Gemini": {
         "name": "Gemini (Google)",
         "url": "https://aistudio.google.com/app/apikey",
         "models": [
-            "gemini-1.5-flash",
-            "gemini-1.5-pro",
-            "gemini-1.5-flash-8b",
-            "gemini-pro-vision"
+            "gemini-2.5-flash-preview-04-17",
+            "gemini-2.5-pro-preview-03-25",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite"
         ]
     }
 }

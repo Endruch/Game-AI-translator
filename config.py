@@ -6,7 +6,7 @@ from pathlib import Path
 
 DEFAULT_SETTINGS = {
     "ai_provider": "Claude",
-    "ai_model": "claude-sonnet-4-20250514",
+    "ai_model": "claude-sonnet-4-6",
     "api_keys": {
         "Claude": "",
         "ChatGPT": "",

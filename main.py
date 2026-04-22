@@ -183,7 +183,7 @@ class App:
         ai_models = self.settings.get("ai_models", {})
         model = ai_models.get(provider, "")
         if not model:
-            model = self.settings.get("ai_model", "claude-sonnet-4-20250514")
+            model = self.settings.get("ai_model", "claude-sonnet-4-6")
 
         rect = self.overlay.get_capture_rect()
         source_lang = self.translator_win.get_selected_source_language()
