@@ -8,10 +8,10 @@ from config import SUPPORTED_LANGUAGES, SOURCE_LANGUAGES, save_settings
 from ui_base import DraggableWidget
 from color_picker import ColorPickerWidget
 
-try:
-    _help_file = Path(__file__).parent / "help_text.txt"
-    HELP_TEXT = _help_file.read_text(encoding="utf-8")
-except:
+_help_path = Path(__file__).parent / "help_text.txt"
+if _help_path.exists():
+    HELP_TEXT = _help_path.read_text(encoding="utf-8")
+else:
     HELP_TEXT = "Help file not available."
 
 

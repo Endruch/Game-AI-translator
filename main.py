@@ -10,7 +10,7 @@ from overlay import OverlayWindow
 from translator_window import TranslatorWindow
 from settings import SettingsWindow
 from ocr_engine import capture_screenshot_base64, check_screenshot_changed, update_cache, reset_last_text
-from claude_api import recognize_and_translate
+from ai_providers import recognize_and_translate
 from history_logger import log_translation
 
 try:
@@ -25,12 +25,14 @@ class TranslationWorker(QObject):
     no_changes = pyqtSignal()
 
     def __init__(self, rect: QRect, source_lang: str, target_lang: str,
-                 api_key: str, color_filters: list, use_color_filters: bool, check_changes: bool = False):
+                 provider: str, api_key: str, model: str, color_filters: list, use_color_filters: bool, check_changes: bool = False):
         super().__init__()
         self.rect = rect
         self.source_lang = source_lang
         self.target_lang = target_lang
+        self.provider = provider
         self.api_key = api_key
+        self.model = model
         self.color_filters = color_filters
         self.use_color_filters = use_color_filters
         self.check_changes = check_changes
@@ -54,7 +56,7 @@ class TranslationWorker(QObject):
                 update_cache(screenshot_b64)
 
             original_text, translation = recognize_and_translate(
-                screenshot_b64, self.source_lang, self.target_lang, self.api_key
+                screenshot_b64, self.source_lang, self.target_lang, self.provider, self.api_key, self.model
             )
 
             if translation.startswith("[Error]"):
@@ -169,11 +171,16 @@ class App:
         self._start_translation(check_changes=False)
 
     def _start_translation(self, check_changes: bool):
-        api_key = self.settings.get("api_key", "").strip()
+        provider = self.settings.get("ai_provider", "Claude")
+        api_keys = self.settings.get("api_keys", {})
+        api_key = api_keys.get(provider, "").strip()
+
         if not api_key:
-            self.translator_win.show_error("[Error] API key is missing.\nPlease add it in Settings.")
+            self.translator_win.show_error(f"[Error] API key for {provider} is missing.\nPlease add it in Settings.")
             self._release_busy_flag()
             return
+
+        model = self.settings.get("ai_model", "claude-sonnet-4-20250514")
 
         rect = self.overlay.get_capture_rect()
         source_lang = self.translator_win.get_selected_source_language()
@@ -181,7 +188,7 @@ class App:
         color_filters = self.translator_win.get_enabled_color_filters()
         use_color_filters = self.settings.get("use_color_filters", False)
 
-        worker = TranslationWorker(rect, source_lang, target_lang, api_key, color_filters, use_color_filters, check_changes)
+        worker = TranslationWorker(rect, source_lang, target_lang, provider, api_key, model, color_filters, use_color_filters, check_changes)
         thread = QThread()
         worker.moveToThread(thread)
 

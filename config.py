@@ -5,7 +5,15 @@ from pathlib import Path
 
 
 DEFAULT_SETTINGS = {
-    "api_key": "",
+    "ai_provider": "Claude",
+    "ai_model": "claude-sonnet-4-20250514",
+    "api_keys": {
+        "Claude": "",
+        "ChatGPT": "",
+        "Grok": "",
+        "DeepSeek": "",
+        "Gemini": ""
+    },
     "source_language": "Auto-detect",
     "target_language": "Russian",
     "use_color_filters": False,

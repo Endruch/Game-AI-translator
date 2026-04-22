@@ -3,12 +3,14 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QLineEdit, QPushButton, QSpinBox, QFrame,
     QColorDialog, QMessageBox, QCheckBox, QTabWidget,
-    QWidget, QFileDialog, QDoubleSpinBox
+    QWidget, QFileDialog, QDoubleSpinBox, QRadioButton, QButtonGroup
 )
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QColor, QKeyEvent
+from PyQt6.QtGui import QFont, QColor, QKeyEvent, QDesktopServices
+from PyQt6.QtCore import QUrl
 
 from config import save_settings, get_history_folder
+from ai_providers import AI_PROVIDERS
 
 
 class HotkeyLineEdit(QLineEdit):
@@ -193,11 +195,11 @@ class SettingsWindow(QDialog):
 
         # Tabs
         tabs = QTabWidget()
+        tabs.addTab(self._tab_ai(), "AI Settings")
         tabs.addTab(self._tab_general(), "General")
-        tabs.addTab(self._tab_overlay(), "Overlay")
+        tabs.addTab(self._tab_colors(), "Colors & Filters")
         tabs.addTab(self._tab_auto(), "Auto-Translate")
-        tabs.addTab(self._tab_history(), "History")
-        tabs.addTab(self._tab_ui(), "Interface")
+        tabs.addTab(self._tab_other(), "Other")
         content_layout.addWidget(tabs)
 
         # Buttons
@@ -217,32 +219,63 @@ class SettingsWindow(QDialog):
 
         layout.addWidget(content)
 
-    def _tab_general(self) -> QWidget:
+    def _tab_ai(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(12)
         layout.setContentsMargins(12, 16, 12, 12)
 
-        layout.addWidget(self._section("Claude API Key"))
-        self.api_key_input = QLineEdit()
-        self.api_key_input.setPlaceholderText("sk-ant-...")
-        self.api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
-        show_btn = QPushButton("Show")
-        show_btn.setFixedWidth(55)
-        show_btn.setCheckable(True)
-        show_btn.setStyleSheet(self._small_btn_style())
-        show_btn.toggled.connect(lambda c: self.api_key_input.setEchoMode(
-            QLineEdit.EchoMode.Normal if c else QLineEdit.EchoMode.Password))
-        show_btn.toggled.connect(lambda c: show_btn.setText("Hide" if c else "Show"))
-        row = QHBoxLayout()
-        row.addWidget(self.api_key_input)
-        row.addWidget(show_btn)
-        layout.addLayout(row)
-        hint = QLabel("Get your key at: console.anthropic.com")
-        hint.setStyleSheet("color: #556688; font-size: 10px;")
-        layout.addWidget(hint)
+        layout.addWidget(self._section("AI Provider"))
+
+        self.ai_radio_buttons = {}
+        self.ai_button_group = QButtonGroup()
+
+        for provider_id, provider_info in AI_PROVIDERS.items():
+            radio = QRadioButton(provider_info["name"])
+            self.ai_radio_buttons[provider_id] = radio
+            self.ai_button_group.addButton(radio)
+            layout.addWidget(radio)
 
         layout.addWidget(self._sep())
+
+        layout.addWidget(self._section("API Keys"))
+
+        self.api_key_inputs = {}
+        for provider_id, provider_info in AI_PROVIDERS.items():
+            label = QLabel(f"{provider_info['name']}:")
+            self.api_key_inputs[provider_id] = QLineEdit()
+            self.api_key_inputs[provider_id].setPlaceholderText("Enter API key...")
+            self.api_key_inputs[provider_id].setEchoMode(QLineEdit.EchoMode.Password)
+
+            show_btn = QPushButton("Show")
+            show_btn.setFixedWidth(55)
+            show_btn.setCheckable(True)
+            show_btn.setStyleSheet(self._small_btn_style())
+            key_input = self.api_key_inputs[provider_id]
+            show_btn.toggled.connect(lambda c, inp=key_input: inp.setEchoMode(
+                QLineEdit.EchoMode.Normal if c else QLineEdit.EchoMode.Password))
+            show_btn.toggled.connect(lambda c, btn=show_btn: btn.setText("Hide" if c else "Show"))
+
+            link_label = QLabel(f'<a href="{provider_info["url"]}" style="color: #6688ff;">Get API Key</a>')
+            link_label.setOpenExternalLinks(False)
+            link_label.linkActivated.connect(lambda url: QDesktopServices.openUrl(QUrl(url)))
+            link_label.setStyleSheet("font-size: 10px;")
+
+            layout.addWidget(label)
+            row = QHBoxLayout()
+            row.addWidget(self.api_key_inputs[provider_id])
+            row.addWidget(show_btn)
+            layout.addLayout(row)
+            layout.addWidget(link_label)
+
+        layout.addStretch()
+        return w
+
+    def _tab_general(self) -> QWidget:
+        w = QWidget()
+        layout = QVBoxLayout(w)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 16, 12, 12)
 
         layout.addWidget(self._section("Hotkeys"))
 
@@ -274,7 +307,7 @@ class SettingsWindow(QDialog):
         layout.addStretch()
         return w
 
-    def _tab_overlay(self) -> QWidget:
+    def _tab_colors(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(12)
@@ -295,7 +328,7 @@ class SettingsWindow(QDialog):
 
         layout.addWidget(self._sep())
 
-        layout.addWidget(self._section("Capture Frame Appearance"))
+        layout.addWidget(self._section("Capture Frame Color"))
 
         color_row = QHBoxLayout()
         color_row.addWidget(QLabel("Border color:"))
@@ -316,19 +349,6 @@ class SettingsWindow(QDialog):
         width_row.addWidget(self.border_width_spin)
         width_row.addStretch()
         layout.addLayout(width_row)
-
-        layout.addWidget(self._sep())
-        layout.addWidget(self._section("Translator Window"))
-
-        opacity_row = QHBoxLayout()
-        opacity_row.addWidget(QLabel("Window opacity (%):"))
-        self.opacity_spin = QSpinBox()
-        self.opacity_spin.setRange(20, 100)
-        self.opacity_spin.setSuffix(" %")
-        self.opacity_spin.setFixedWidth(80)
-        opacity_row.addWidget(self.opacity_spin)
-        opacity_row.addStretch()
-        layout.addLayout(opacity_row)
 
         layout.addStretch()
         return w
@@ -367,13 +387,40 @@ class SettingsWindow(QDialog):
         layout.addStretch()
         return w
 
-    def _tab_history(self) -> QWidget:
+    def _tab_other(self) -> QWidget:
         w = QWidget()
         layout = QVBoxLayout(w)
         layout.setSpacing(12)
         layout.setContentsMargins(12, 16, 12, 12)
 
-        layout.addWidget(self._section("Translation History Log"))
+        layout.addWidget(self._section("Translator Window"))
+
+        opacity_row = QHBoxLayout()
+        opacity_row.addWidget(QLabel("Window opacity (%):"))
+        self.opacity_spin = QSpinBox()
+        self.opacity_spin.setRange(20, 100)
+        self.opacity_spin.setSuffix(" %")
+        self.opacity_spin.setFixedWidth(80)
+        opacity_row.addWidget(self.opacity_spin)
+        opacity_row.addStretch()
+        layout.addLayout(opacity_row)
+
+        layout.addWidget(self._sep())
+
+        layout.addWidget(self._section("Translation Text"))
+
+        font_row = QHBoxLayout()
+        font_row.addWidget(QLabel("Font size (pt):"))
+        self.font_size_spin = QSpinBox()
+        self.font_size_spin.setRange(8, 24)
+        self.font_size_spin.setFixedWidth(70)
+        font_row.addWidget(self.font_size_spin)
+        font_row.addStretch()
+        layout.addLayout(font_row)
+
+        layout.addWidget(self._sep())
+
+        layout.addWidget(self._section("Translation History"))
 
         self.history_enabled_check = QCheckBox("Save translation history to file")
         layout.addWidget(self.history_enabled_check)
@@ -385,9 +432,6 @@ class SettingsWindow(QDialog):
         info.setWordWrap(True)
         info.setStyleSheet("color: #667799; font-size: 10px;")
         layout.addWidget(info)
-
-        layout.addWidget(self._sep())
-        layout.addWidget(self._section("Log Folder"))
 
         self.history_folder_input = QLineEdit()
         self.history_folder_input.setPlaceholderText("Default: Documents\\GameTranslator\\")
@@ -402,7 +446,6 @@ class SettingsWindow(QDialog):
         folder_row.addWidget(browse_btn)
         layout.addLayout(folder_row)
 
-        # Show current log folder
         self._folder_hint = QLabel("")
         self._folder_hint.setStyleSheet("color: #556688; font-size: 10px;")
         self._folder_hint.setWordWrap(True)
@@ -417,29 +460,17 @@ class SettingsWindow(QDialog):
         layout.addStretch()
         return w
 
-    def _tab_ui(self) -> QWidget:
-        w = QWidget()
-        layout = QVBoxLayout(w)
-        layout.setSpacing(12)
-        layout.setContentsMargins(12, 16, 12, 12)
-
-        layout.addWidget(self._section("Translation Text"))
-
-        font_row = QHBoxLayout()
-        font_row.addWidget(QLabel("Font size (pt):"))
-        self.font_size_spin = QSpinBox()
-        self.font_size_spin.setRange(8, 24)
-        self.font_size_spin.setFixedWidth(70)
-        font_row.addWidget(self.font_size_spin)
-        font_row.addStretch()
-        layout.addLayout(font_row)
-
-        layout.addStretch()
-        return w
-
     def _load_values(self):
         s = self.settings
-        self.api_key_input.setText(s.get("api_key", ""))
+
+        selected_provider = s.get("ai_provider", "Claude")
+        if selected_provider in self.ai_radio_buttons:
+            self.ai_radio_buttons[selected_provider].setChecked(True)
+
+        api_keys = s.get("api_keys", {})
+        for provider_id, key_input in self.api_key_inputs.items():
+            key_input.setText(api_keys.get(provider_id, ""))
+
         self.hotkey_input.setText(s.get("hotkey", "shift+F9"))
         self.hotkey_hide_input.setText(s.get("hotkey_hide_overlay", "shift+F8"))
 
@@ -469,7 +500,18 @@ class SettingsWindow(QDialog):
 
     def _save(self):
         s = self.settings
-        s["api_key"] = self.api_key_input.text().strip()
+
+        for provider_id, radio in self.ai_radio_buttons.items():
+            if radio.isChecked():
+                s["ai_provider"] = provider_id
+                s["ai_model"] = AI_PROVIDERS[provider_id]["models"][0]
+                break
+
+        if "api_keys" not in s:
+            s["api_keys"] = {}
+        for provider_id, key_input in self.api_key_inputs.items():
+            s["api_keys"][provider_id] = key_input.text().strip()
+
         s["hotkey"] = self.hotkey_input.text().strip() or "shift+F9"
         s["hotkey_hide_overlay"] = self.hotkey_hide_input.text().strip() or "shift+F8"
 
