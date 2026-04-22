@@ -149,7 +149,10 @@ class SettingsWindow(QDialog):
             }
             QScrollArea {
                 border: none;
-                background: transparent;
+                background: #12121c;
+            }
+            QScrollArea > QWidget > QWidget {
+                background: #12121c;
             }
             QScrollBar:vertical {
                 background: rgba(30,30,50,100);

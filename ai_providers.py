@@ -238,10 +238,7 @@ def recognize_and_translate_gemini(screenshot_b64: str, source_language: str, ta
     else:
         prompt = f"Extract all text from this image (it's in {source_language}) and translate it to {target_language}. Keep player names unchanged. Return ONLY the translated text, nothing else."
 
-    if "2.0" in model or "exp" in model:
-        api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    else:
-        api_url = f"https://generativelanguage.googleapis.com/v1/models/{model}:generateContent"
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 
     headers = {"Content-Type": "application/json"}
 
@@ -261,11 +258,23 @@ def recognize_and_translate_gemini(screenshot_b64: str, source_language: str, ta
 
     for retry in range(max_retries):
         try:
-            response = requests.post(f"{api_url}?key={api_key}", headers=headers, json=payload, timeout=30)
+            response = requests.post(api_url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
             result = response.json()
             translation = result["candidates"][0]["content"]["parts"][0]["text"].strip()
             return translation, translation
+        except requests.exceptions.HTTPError as e:
+            error_msg = str(e)
+            try:
+                error_data = response.json()
+                if "error" in error_data:
+                    error_msg = error_data["error"].get("message", error_msg)
+            except:
+                pass
+            if retry < max_retries - 1:
+                time.sleep(1)
+                continue
+            return "", f"[Error] {error_msg}"
         except Exception as e:
             if retry < max_retries - 1:
                 time.sleep(1)
