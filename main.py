@@ -180,7 +180,10 @@ class App:
             self._release_busy_flag()
             return
 
-        model = self.settings.get("ai_model", "claude-sonnet-4-20250514")
+        ai_models = self.settings.get("ai_models", {})
+        model = ai_models.get(provider, "")
+        if not model:
+            model = self.settings.get("ai_model", "claude-sonnet-4-20250514")
 
         rect = self.overlay.get_capture_rect()
         source_lang = self.translator_win.get_selected_source_language()

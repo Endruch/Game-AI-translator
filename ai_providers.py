@@ -242,7 +242,7 @@ def recognize_and_translate_gemini(screenshot_b64: str, source_language: str, ta
     else:
         prompt = f"Extract all text from this image (it's in {source_language}) and translate it to {target_language}. Keep player names unchanged. Return ONLY the translated text, nothing else."
 
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    api_url = f"https://generativelanguage.googleapis.com/v1/models/{model}:generateContent?key={api_key}"
 
     headers = {"Content-Type": "application/json"}
 
