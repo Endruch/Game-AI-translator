@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QLineEdit, QPushButton, QSpinBox, QFrame,
     QColorDialog, QMessageBox, QCheckBox, QTabWidget,
     QWidget, QFileDialog, QDoubleSpinBox, QRadioButton, QButtonGroup,
-    QScrollArea
+    QScrollArea, QComboBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QKeyEvent, QDesktopServices
@@ -267,6 +267,7 @@ class SettingsWindow(QDialog):
 
         self.api_key_containers = {}
         self.api_key_inputs = {}
+        self.model_combos = {}
 
         for provider_id, provider_info in AI_PROVIDERS.items():
             container = QWidget()
@@ -295,12 +296,50 @@ class SettingsWindow(QDialog):
             link_label.linkActivated.connect(lambda url: QDesktopServices.openUrl(QUrl(url)))
             link_label.setStyleSheet("font-size: 10px; color: #6688ff;")
 
+            model_label = QLabel("Model:")
+            model_label.setStyleSheet("color: #ccccee; font-size: 12px;")
+
+            self.model_combos[provider_id] = QComboBox()
+            self.model_combos[provider_id].addItems(provider_info["models"])
+            self.model_combos[provider_id].setStyleSheet("""
+                QComboBox {
+                    background: #1e1e30;
+                    color: white;
+                    border: 1px solid rgba(100,100,180,150);
+                    border-radius: 4px;
+                    padding: 5px 8px;
+                    font-size: 12px;
+                }
+                QComboBox:hover {
+                    border-color: #6666cc;
+                }
+                QComboBox::drop-down {
+                    border: none;
+                }
+                QComboBox::down-arrow {
+                    image: none;
+                    border-left: 4px solid transparent;
+                    border-right: 4px solid transparent;
+                    border-top: 6px solid #ccccee;
+                    margin-right: 8px;
+                }
+                QComboBox QAbstractItemView {
+                    background: #1e1e30;
+                    color: white;
+                    border: 1px solid rgba(100,100,180,150);
+                    selection-background-color: #5555cc;
+                }
+            """)
+
             container_layout.addWidget(label)
             row = QHBoxLayout()
             row.addWidget(self.api_key_inputs[provider_id])
             row.addWidget(show_btn)
             container_layout.addLayout(row)
             container_layout.addWidget(link_label)
+            container_layout.addSpacing(8)
+            container_layout.addWidget(model_label)
+            container_layout.addWidget(self.model_combos[provider_id])
 
             self.api_key_containers[provider_id] = container
             layout.addWidget(container)
@@ -500,6 +539,14 @@ class SettingsWindow(QDialog):
         for provider_id, key_input in self.api_key_inputs.items():
             key_input.setText(api_keys.get(provider_id, ""))
 
+        ai_models = s.get("ai_models", {})
+        for provider_id, combo in self.model_combos.items():
+            saved_model = ai_models.get(provider_id, "")
+            if saved_model:
+                index = combo.findText(saved_model)
+                if index >= 0:
+                    combo.setCurrentIndex(index)
+
         self._update_api_visibility()
 
         self.hotkey_input.setText(s.get("hotkey", "shift+F9"))
@@ -535,13 +582,18 @@ class SettingsWindow(QDialog):
         for provider_id, radio in self.ai_radio_buttons.items():
             if radio.isChecked():
                 s["ai_provider"] = provider_id
-                s["ai_model"] = AI_PROVIDERS[provider_id]["models"][0]
+                s["ai_model"] = self.model_combos[provider_id].currentText()
                 break
 
         if "api_keys" not in s:
             s["api_keys"] = {}
         for provider_id, key_input in self.api_key_inputs.items():
             s["api_keys"][provider_id] = key_input.text().strip()
+
+        if "ai_models" not in s:
+            s["ai_models"] = {}
+        for provider_id, combo in self.model_combos.items():
+            s["ai_models"][provider_id] = combo.currentText()
 
         s["hotkey"] = self.hotkey_input.text().strip() or "shift+F9"
         s["hotkey_hide_overlay"] = self.hotkey_hide_input.text().strip() or "shift+F8"

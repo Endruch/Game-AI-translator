@@ -10,7 +10,8 @@ AI_PROVIDERS = {
         "models": [
             "claude-sonnet-4-20250514",
             "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022"
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229"
         ]
     },
     "ChatGPT": {
@@ -19,7 +20,8 @@ AI_PROVIDERS = {
         "models": [
             "gpt-4o",
             "gpt-4o-mini",
-            "gpt-4-turbo"
+            "gpt-4-turbo",
+            "gpt-4"
         ]
     },
     "Grok": {
@@ -34,16 +36,18 @@ AI_PROVIDERS = {
         "name": "DeepSeek",
         "url": "https://platform.deepseek.com/api_keys",
         "models": [
-            "deepseek-chat"
+            "deepseek-chat",
+            "deepseek-reasoner"
         ]
     },
     "Gemini": {
         "name": "Gemini (Google)",
         "url": "https://aistudio.google.com/app/apikey",
         "models": [
-            "gemini-2.0-flash-exp",
+            "gemini-1.5-flash",
             "gemini-1.5-pro",
-            "gemini-1.5-flash"
+            "gemini-1.5-flash-8b",
+            "gemini-pro-vision"
         ]
     }
 }
